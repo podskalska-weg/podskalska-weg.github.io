@@ -3,33 +3,3008 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ICT Výukový Portál | SŠ</title>
+  <title>ICT Výukový Portál | SŠ Studio</title>
   
-  <!-- Tailwind CSS pro styly -->
+  <!-- 1. Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Babel pro přímé spuštění TSX/JSX v prohlížeči -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <!-- Import mapa pro React a ikony Lucide -->
-  <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.3.1",
-        "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
-        "lucide-react": "https://esm.sh/lucide-react@0.460.0?deps=react@18.3.1"
-      }
-    }
-  </script>
+  <!-- 2. Klasické UMD skripty (fungují i lokálně přes file:// bez CORS a modulů) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/lucide-react@0.344.0/dist/umd/lucide-react.min.js"></script>
+  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-[#0b1120] text-slate-100 antialiased selection:bg-[#00d2ff] selection:text-slate-950">
   <div id="root"></div>
 
-  <!-- Načtení a spuštění vašeho souboru main.tsx -->
-  <script type="text/babel" data-presets="react,typescript" data-type="module">
-    import React from 'react';
-    import { createRoot } from 'react-dom/client';
-    import App from './main.tsx';
+  <!-- 3. Čistý Babel skript bez data-type="module" -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    const { createRoot } = ReactDOM;
+
+    // Načtení ikon z globálního objektu window.lucideReact (s pojistkou, kdyby se CDN načetlo pomaleji)
+    const Lucide = window.lucideReact || {};
+    const FallbackIcon = ({ size = 24, className = '' }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+        <rect x="4" y="4" width="16" height="16" rx="2" />
+        <rect x="9" y="9" width="6" height="6" />
+      </svg>
+    );
+
+    const {
+      Cpu = FallbackIcon, HardDrive = FallbackIcon, Monitor = FallbackIcon, Zap = FallbackIcon,
+      Fan = FallbackIcon, Shield = FallbackIcon, Terminal = FallbackIcon, Layers = FallbackIcon,
+      Box = FallbackIcon, Cloud = FallbackIcon, Wifi = FallbackIcon, Battery = FallbackIcon,
+      Award = FallbackIcon, AlertTriangle = FallbackIcon, CheckCircle = FallbackIcon,
+      XCircle = FallbackIcon, HelpCircle = FallbackIcon, Play = FallbackIcon, Edit3 = FallbackIcon,
+      Plus = FallbackIcon, Trash2 = FallbackIcon, Copy = FallbackIcon, Download = FallbackIcon,
+      Upload = FallbackIcon, Github = FallbackIcon, Search = FallbackIcon,
+      ChevronLeft = FallbackIcon, ChevronRight = FallbackIcon, Maximize2 = FallbackIcon,
+      Minimize2 = FallbackIcon, List = FallbackIcon, Sparkles = FallbackIcon,
+      Image: ImageIcon = FallbackIcon, BookOpen = FallbackIcon, ExternalLink = FallbackIcon,
+      Settings = FallbackIcon, Save = FallbackIcon, ArrowUp = FallbackIcon, ArrowDown = FallbackIcon,
+      Eye = FallbackIcon, Code = FallbackIcon, Gamepad2 = FallbackIcon, Smartphone = FallbackIcon,
+      Server = FallbackIcon, Lock = FallbackIcon, User = FallbackIcon, Users = FallbackIcon,
+      Clock = FallbackIcon, Flame = FallbackIcon, Wrench = FallbackIcon, Sliders = FallbackIcon,
+      Activity = FallbackIcon, Database = FallbackIcon, Disc = FallbackIcon, Compass = FallbackIcon,
+      Key = FallbackIcon, Anchor = FallbackIcon, Coffee = FallbackIcon, Truck = FallbackIcon,
+      ShoppingCart = FallbackIcon, Film = FallbackIcon, Camera = FallbackIcon, Mic = FallbackIcon,
+      Headphones = FallbackIcon, Printer = FallbackIcon, Mouse = FallbackIcon,
+      Keyboard = FallbackIcon, Cable = FallbackIcon, Globe = FallbackIcon, Rocket = FallbackIcon,
+      Car = FallbackIcon, Tv = FallbackIcon, CreditCard = FallbackIcon, RefreshCw = FallbackIcon,
+      Crosshair = FallbackIcon, Layout = FallbackIcon, Check = FallbackIcon, X = FallbackIcon,
+      Info = FallbackIcon, FileText = FallbackIcon, Share2 = FallbackIcon, Pointer = FallbackIcon
+    } = Lucide;
+
+    // ============================================================================
+    // 1. SJEDNOCENÁ KNIHOVNA IKON
+    // ============================================================================
+    const ICON_MAP = {
+      Cpu, HardDrive, Monitor, Zap, Fan, Shield, Terminal, Layers, Box, Cloud,
+      Wifi, Battery, Award, AlertTriangle, CheckCircle, XCircle, HelpCircle,
+      Gamepad2, Smartphone, Server, Lock, User, Users, Clock, Flame, Wrench,
+      Sliders, Activity, Database, Disc, Compass, Key, Anchor, Coffee, Truck,
+      ShoppingCart, Film, Camera, Mic, Headphones, Printer, Mouse, Keyboard,
+      Cable, Globe, Rocket, Car, Tv, CreditCard, Sparkles, BookOpen, ImageIcon,
+      Crosshair, RefreshCw, Info, FileText, Trash2, Copy
+    };
+
+    const ICON_CATEGORIES = [
+      {
+        name: 'Hardware & PC',
+        icons: ['Cpu', 'HardDrive', 'Monitor', 'Zap', 'Fan', 'Box', 'Disc', 'Database', 'Server', 'Battery', 'Cable', 'Mouse', 'Keyboard', 'Headphones', 'Printer', 'Camera', 'Mic']
+      },
+      {
+        name: 'Systém & Sítě',
+        icons: ['Terminal', 'Layers', 'Cloud', 'Wifi', 'Globe', 'Shield', 'Lock', 'Key', 'User', 'Users', 'Sliders', 'Activity', 'RefreshCw']
+      },
+      {
+        name: 'Analogie & Symboly',
+        icons: ['Sparkles', 'AlertTriangle', 'CheckCircle', 'XCircle', 'HelpCircle', 'Award', 'Clock', 'Flame', 'Wrench', 'Compass', 'Anchor', 'Coffee', 'Truck', 'ShoppingCart', 'Film', 'Gamepad2', 'Smartphone', 'Rocket', 'Car', 'Tv', 'CreditCard', 'Crosshair']
+      }
+    ];
+
+    const UnifiedIcon = ({ name, size = 24, className = '', variant = 'cyan' }) => {
+      const IconComponent = ICON_MAP[name] || Cpu;
+      const variants = {
+        cyan: 'bg-[#00d2ff]/15 text-[#00d2ff] border-[#00d2ff]/30 shadow-[0_0_15px_rgba(0,210,255,0.15)]',
+        slate: 'bg-slate-800 text-slate-300 border-slate-700',
+        amber: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+        emerald: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+        rose: 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+      };
+
+      return (
+        <div className={`inline-flex items-center justify-center rounded-xl border p-2.5 transition-all ${variants[variant] || variants.cyan} ${className}`}>
+          <IconComponent size={size} strokeWidth={2} />
+        </div>
+      );
+    };
+
+    const PRESET_IMAGES = [
+      {
+        id: 'ascii',
+        name: 'ASCII Tabulka a Binární kód',
+        url: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+            <rect width="800" height="500" rx="20" fill="#0f172a" stroke="#1e293b" stroke-width="4"/>
+            <text x="40" y="60" fill="#00d2ff" font-family="monospace" font-size="32" font-weight="bold">ASCII TABLE (Ukázka kódování)</text>
+            <line x1="40" y1="80" x2="760" y2="80" stroke="#334155" stroke-width="2"/>
+            <g font-family="monospace" font-size="18" fill="#94a3b8">
+              <text x="50" y="115" fill="#38bdf8" font-weight="bold">DEC   HEX   BINÁRNĚ      ZNAK</text>
+              <text x="50" y="155">65    41    01000001     A</text>
+              <text x="50" y="190">66    42    01000010     B</text>
+              <text x="50" y="225">67    43    01000011     C</text>
+              <text x="50" y="260">68    44    01000100     D</text>
+              <text x="50" y="295">97    61    01100001     a</text>
+              <text x="50" y="330">98    62    01100010     b</text>
+              <text x="50" y="365">48    30    00110000     0</text>
+              <text x="50" y="400">49    31    00110001     1</text>
+              <text x="50" y="435">32    20    00100000     [Mezera]</text>
+            </g>
+            <rect x="430" y="120" width="310" height="310" rx="16" fill="#1e293b" stroke="#00d2ff" stroke-width="2"/>
+            <text x="585" y="175" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-size="22" font-weight="bold">Písmeno "A"</text>
+            <text x="585" y="255" text-anchor="middle" fill="#00d2ff" font-family="monospace" font-size="44" font-weight="bold">01000001</text>
+            <text x="585" y="315" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="16">8 bitů = 1 Bajt (Byte)</text>
+            <text x="585" y="380" text-anchor="middle" fill="#38bdf8" font-family="sans-serif" font-size="15">1 = Proud teče | 0 = Vypnuto</text>
+          </svg>
+        `)
+      },
+      {
+        id: 'cpu_die',
+        name: 'Architektura Procesoru (Čip)',
+        url: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+            <rect width="800" height="500" rx="20" fill="#0f172a"/>
+            <rect x="150" y="50" width="500" height="400" rx="24" fill="#1e293b" stroke="#00d2ff" stroke-width="4"/>
+            <rect x="190" y="90" width="190" height="100" rx="10" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+            <text x="285" y="145" text-anchor="middle" fill="#00d2ff" font-family="sans-serif" font-size="20" font-weight="bold">Jádro 1 (P-Core)</text>
+            <rect x="420" y="90" width="190" height="100" rx="10" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+            <text x="515" y="145" text-anchor="middle" fill="#00d2ff" font-family="sans-serif" font-size="20" font-weight="bold">Jádro 2 (P-Core)</text>
+            <rect x="190" y="210" width="190" height="100" rx="10" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+            <text x="285" y="265" text-anchor="middle" fill="#00d2ff" font-family="sans-serif" font-size="20" font-weight="bold">Jádro 3 (P-Core)</text>
+            <rect x="420" y="210" width="190" height="100" rx="10" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+            <text x="515" y="265" text-anchor="middle" fill="#00d2ff" font-family="sans-serif" font-size="20" font-weight="bold">Jádro 4 (P-Core)</text>
+            <rect x="190" y="330" width="420" height="80" rx="12" fill="#00d2ff" fill-opacity="0.15" stroke="#00d2ff" stroke-width="2"/>
+            <text x="400" y="378" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-size="24" font-weight="bold">L3 Cache Paměť (32 - 96 MB)</text>
+          </svg>
+        `)
+      },
+      {
+        id: 'hdd_ssd',
+        name: 'Porovnání HDD vs. NVMe SSD',
+        url: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+            <rect width="800" height="500" rx="20" fill="#0f172a"/>
+            <rect x="50" y="60" width="320" height="380" rx="16" fill="#1e293b" stroke="#64748b" stroke-width="3"/>
+            <circle cx="210" cy="220" r="110" fill="#0f172a" stroke="#94a3b8" stroke-width="4"/>
+            <circle cx="210" cy="220" r="30" fill="#334155"/>
+            <line x1="210" y1="350" x2="260" y2="230" stroke="#00d2ff" stroke-width="8" stroke-linecap="round"/>
+            <text x="210" y="405" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-size="22" font-weight="bold">Mechanické HDD (Plotny)</text>
+            <rect x="430" y="140" width="320" height="120" rx="12" fill="#0f172a" stroke="#00d2ff" stroke-width="4"/>
+            <rect x="460" y="165" width="70" height="70" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <rect x="550" y="165" width="80" height="70" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <rect x="650" y="165" width="80" height="70" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <text x="590" y="320" text-anchor="middle" fill="#00d2ff" font-family="sans-serif" font-size="24" font-weight="bold">M.2 NVMe SSD (Čipy)</text>
+            <text x="590" y="360" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="18">Až 50× rychlejší • 0 pohyblivých částí</text>
+          </svg>
+        `)
+      },
+      {
+        id: 'psu_wiring',
+        name: 'Napájecí zdroj (PSU) a větve',
+        url: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+            <rect width="800" height="500" rx="20" fill="#0f172a"/>
+            <rect x="60" y="130" width="240" height="240" rx="20" fill="#1e293b" stroke="#00d2ff" stroke-width="4"/>
+            <circle cx="180" cy="250" r="80" fill="none" stroke="#334155" stroke-width="6" stroke-dasharray="15,10"/>
+            <text x="180" y="260" text-anchor="middle" fill="#00d2ff" font-family="sans-serif" font-size="32" font-weight="bold">750W</text>
+            <text x="180" y="345" text-anchor="middle" fill="#fbbf24" font-family="sans-serif" font-size="16" font-weight="bold">80 PLUS GOLD</text>
+            <path d="M 300 180 L 480 100" stroke="#00d2ff" stroke-width="6" fill="none"/>
+            <path d="M 300 250 L 480 250" stroke="#00d2ff" stroke-width="6" fill="none"/>
+            <path d="M 300 320 L 480 400" stroke="#00d2ff" stroke-width="6" fill="none"/>
+            <rect x="480" y="60" width="250" height="80" rx="12" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <text x="605" y="108" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-size="20" font-weight="bold">CPU (4+4 PIN)</text>
+            <rect x="480" y="210" width="250" height="80" rx="12" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <text x="605" y="258" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-size="20" font-weight="bold">GPU (12VHPWR / 6+2)</text>
+            <rect x="480" y="360" width="250" height="80" rx="12" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <text x="605" y="408" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-size="20" font-weight="bold">Základní deska (24 PIN)</text>
+          </svg>
+        `)
+      },
+      {
+        id: '80plus',
+        name: 'Tabulka certifikace 80 PLUS',
+        url: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+            <rect width="800" height="500" rx="20" fill="#0f172a"/>
+            <text x="60" y="70" fill="#00d2ff" font-family="sans-serif" font-size="28" font-weight="bold">Certifikace účinnosti 80 PLUS (při 50% zátěži)</text>
+            <g font-family="sans-serif" font-size="20" font-weight="bold">
+              <rect x="60" y="110" width="680" height="55" rx="8" fill="#1e293b"/>
+              <text x="90" y="145" fill="#e2e8f0">80 PLUS White</text>
+              <text x="620" y="145" fill="#94a3b8">82 %</text>
+              <rect x="60" y="180" width="680" height="55" rx="8" fill="#451a03"/>
+              <text x="90" y="215" fill="#fdba74">80 PLUS Bronze</text>
+              <text x="620" y="215" fill="#fdba74">85 %</text>
+              <rect x="60" y="250" width="680" height="65" rx="8" fill="#422006" stroke="#fbbf24" stroke-width="3"/>
+              <text x="90" y="290" fill="#fde047">80 PLUS Gold (Zlatý standard)</text>
+              <text x="620" y="290" fill="#fde047">90 %</text>
+              <rect x="60" y="330" width="680" height="55" rx="8" fill="#1e293b"/>
+              <text x="90" y="365" fill="#cbd5e1">80 PLUS Platinum</text>
+              <text x="620" y="365" fill="#38bdf8">92 %</text>
+              <rect x="60" y="400" width="680" height="55" rx="8" fill="#0f172a" stroke="#00d2ff" stroke-width="2"/>
+              <text x="90" y="435" fill="#00d2ff">80 PLUS Titanium</text>
+              <text x="620" y="435" fill="#00d2ff">94 %</text>
+            </g>
+          </svg>
+        `)
+      }
+    ];
+
+    // ============================================================================
+    // 2. VÝCHOZÍ DATA: VŠECHNY 4 PREZENTACE
+    // ============================================================================
+    const INITIAL_PRESENTATIONS = [
+      {
+        id: 'hw-zaklady',
+        title: 'Jak funguje počítač? Poznáváme Hardware',
+        subtitle: 'Co se skrývá uvnitř počítače a jak spolu jednotlivé díly komunikují.',
+        category: 'Hardware',
+        badge: 'ICT • Ročník 1',
+        icon: 'Cpu',
+        updatedAt: '2025-02-15',
+        kahootUrl: 'https://create.kahoot.it/',
+        slides: [
+          {
+            id: 'hw-1',
+            type: 'title',
+            badge: 'ICT',
+            icon: 'Cpu',
+            title: 'Jak funguje počítač?\nPoznáváme Hardware',
+            subtitle: 'Co se skrývá uvnitř počítače a jak spolu jednotlivé díly komunikují.'
+          },
+          {
+            id: 'hw-2',
+            type: 'comparison',
+            badge: 'ZÁKLADNÍ PRINCIP',
+            title: 'Jak počítač vůbec mluví?',
+            analogy: 'Písmeno "A" vidí počítač jako binární kód: 01000001',
+            left: {
+              icon: 'XCircle',
+              title: 'Číslo 0 = Vypnuto',
+              subtitle: 'Žádný proud v obvodu',
+              points: [
+                'Jako zhasnutá žárovka v pokoji.',
+                'Nízké napětí na tranzistoru.',
+                'Základní stavební kámen informace (1 bit).'
+              ]
+            },
+            right: {
+              icon: 'CheckCircle',
+              title: 'Číslo 1 = Zapnuto',
+              subtitle: 'Proud protéká obvodem',
+              points: [
+                'Rozsvícená žárovka v pokoji.',
+                'Z pouhých nul a jedniček skládá hry, filmy i hudbu.',
+                '8 bitů dohromady tvoří 1 Bajt (Byte) = 1 znak.'
+              ]
+            }
+          },
+          {
+            id: 'hw-3',
+            type: 'split-image',
+            badge: 'KÓDOVÁNÍ ZNAKŮ',
+            title: 'ASCII Tabulka: Překladový slovník',
+            imageUrl: PRESET_IMAGES[0].url,
+            imageCaption: 'Ukázka převodu čísel na písmena v tabulce ASCII',
+            points: [
+              { icon: 'Terminal', title: 'Čísla na písmena', text: 'Počítač nezná abecedu. Každému písmenu proto lidstvo přiřadilo pevné číslo (např. A = 65).' },
+              { icon: 'Layers', title: '8 bitů na znak', text: 'Číslo 65 se v dvojkové soustavě zapíše jako 01000001.' },
+              { icon: 'Globe', title: 'Dnes vládne Unicode (UTF-8)', text: 'Původní ASCII neměla české háčky, čárky ani emoji. Moderní UTF-8 obsáhne všechny jazyky světa.' }
+            ]
+          },
+          {
+            id: 'hw-4',
+            type: 'comparison',
+            badge: 'ZÁKLADNÍ ROZDĚLENÍ',
+            title: 'Hardware vs. Software',
+            analogy: 'Počítač funguje jako člověk: Hardware je fyzické tělo, Software jsou nehmotné myšlenky a duše.',
+            left: {
+              icon: 'Box',
+              title: 'Hardware (Tělo)',
+              subtitle: 'Všechno, na co si můžete fyzicky sáhnout',
+              points: [
+                'Příklady: klávesnice, monitor, procesor, skříň.',
+                'Křemíkové čipy, tištěné spoje, kabely a ventilátory.',
+                'Bez programů je to jen drahá hromada železa a písku.'
+              ]
+            },
+            right: {
+              icon: 'Cloud',
+              title: 'Software (Myšlenky)',
+              subtitle: 'Programy, instrukce a data běžící uvnitř',
+              points: [
+                'Příklady: Windows, Minecraft, webový prohlížeč.',
+                'Říká hardwaru, co má v danou sekundu spočítat.',
+                'Nelze si na něj sáhnout, je uložen jako 0 a 1 na disku.'
+              ]
+            }
+          },
+          {
+            id: 'hw-5',
+            type: 'cards-3',
+            badge: 'PŘEHLED SESTAVY',
+            title: 'Co je uvnitř počítače? (1. část)',
+            analogy: 'Každý komponent uvnitř skříně má svou nezastupitelnou roli jako orgány v těle.',
+            cards: [
+              { icon: 'Cpu', highlight: 'CPU', title: 'Procesor', text: 'Myslící mozek celého stroje. Řídí a počítá všechny operace.' },
+              { icon: 'Layers', highlight: 'MB', title: 'Základní deska', text: 'Město plné měděných dálnic pro data. Propojuje všechny díly.' },
+              { icon: 'Box', highlight: 'RAM', title: 'Operační paměť', text: 'Rychlý pracovní stůl na právě rozdělané úkoly a spuštěné hry.' }
+            ]
+          },
+          {
+            id: 'hw-6',
+            type: 'cards-3',
+            badge: 'PŘEHLED SESTAVY',
+            title: 'Co je uvnitř počítače? (2. část)',
+            analogy: 'Aby mozek mohl pracovat, potřebuje archiv, malíře obrazu, elektrárnu a chlazení.',
+            cards: [
+              { icon: 'HardDrive', highlight: 'SSD / HDD', title: 'Pevný disk & Grafika', text: 'Obří skříň na trvalé soubory (SSD) a bleskový malíř pixelů (GPU).' },
+              { icon: 'Zap', highlight: 'PSU', title: 'Napájecí zdroj', text: 'Domácí elektrárna dodávající bezpečnou energii všem čipům.' },
+              { icon: 'Fan', highlight: 'COOLING', title: 'Chladič', text: 'Klimatizace proti přehřátí. Odvádí desítky stupňů tepla pryč.' }
+            ]
+          },
+          {
+            id: 'hw-7',
+            type: 'split-image',
+            badge: 'CENTRÁLNÍ JEDNOTKA',
+            title: 'Procesor (CPU) = Mozek počítače',
+            imageUrl: PRESET_IMAGES[1].url,
+            imageCaption: 'Vnitřní uspořádání moderního vícejádrového procesoru',
+            points: [
+              { icon: 'Cpu', title: 'Hlavní šéf počítače', text: 'Přemýšlí, počítá fyziku ve hrách a říká ostatním dílům, co přesně mají dělat.' },
+              { icon: 'Activity', title: 'Jednotka rychlosti (GHz)', text: 'Měří se v Gigahertzích (GHz). Vyšší takt znamená rychlejší přemýšlení čipu.' }
+            ]
+          },
+          {
+            id: 'hw-8',
+            type: 'big-stat',
+            badge: 'VÝPOČETNÍ VÝKON',
+            title: 'Jak rychle mozek počítače myslí?',
+            stat: '4 000 000 000',
+            statLabel: 'počet výpočtů za jedinou vteřinu',
+            description: 'Kde člověk stihne vyřešit 1+1 za jednu vteřinu, moderní procesor (nebo spíše jádro procesoru) o taktu 4 GHz zvládne 4 miliardy operací.'
+          },
+          {
+            id: 'hw-9',
+            type: 'cards-3',
+            badge: 'MIKROSVĚT HARDWARU',
+            title: 'Co je uvnitř čipu? Tranzistory!',
+            analogy: '"Udělali jsme runy tak složité, že písek začal sám přemýšlet."',
+            cards: [
+              { icon: 'Sliders', highlight: '10+ mld.', title: 'Mikroskopické spínače', text: 'Jeden tranzistor funguje jako miniaturní elektronický vypínač pro 0 a 1.' },
+              { icon: 'Crosshair', highlight: '3 nm', title: 'Menší než lidský vlas', text: 'Nejmenší tranzistory měří jen 3 nanometry — na šířku vlasu se jich vejdou tisíce.' },
+              { icon: 'Sparkles', highlight: 'Křemík (Si)', title: 'Zrozeno z písku', text: 'Čipy se vyrábějí z ultračistého křemíku taveného právě z křemenného písku.' }
+            ]
+          },
+          {
+            id: 'hw-10',
+            type: 'cards-3',
+            badge: 'ZAJÍMAVOST ARCHITEKTURY',
+            title: 'Cache paměť: Kapsa u kalhot',
+            analogy: 'Proč má procesor vlastní miniaturní paměť přímo v sobě?',
+            cards: [
+              { icon: 'Zap', highlight: '1 ns', title: 'Kapsa (Cache)', text: 'Přímo uvnitř procesoru. Dosah za 0,000000001 vteřiny. Okamžitý přístup.' },
+              { icon: 'Box', highlight: '~10 ns', title: 'Pracovní stůl (RAM)', text: 'Kousek vedle procesoru na desce. Větší prostor (16-32 GB), rychlý přístup.' },
+              { icon: 'HardDrive', highlight: '~100 000 ns', title: 'Skříň (SSD/HDD)', text: 'Na druhé straně skříně. Obří kapacita v Terabajtech, ale delší hledání.' }
+            ]
+          },
+          {
+            id: 'hw-11',
+            type: 'comparison',
+            badge: 'INFRASTRUKTURA & PAMĚŤ',
+            title: 'Základní deska a Operační paměť RAM',
+            analogy: 'Základní deska je město plné silnic, RAM je váš pracovní stůl.',
+            left: {
+              icon: 'Layers',
+              title: 'Základní deska = Město',
+              subtitle: 'Centrální křižovatka počítače',
+              points: [
+                'Velká deska s tištěnými spoji, do které se zapojují všechny součástky.',
+                'Měděné sběrnice slouží jako dálnice přepravující data mezi díly.'
+              ]
+            },
+            right: {
+              icon: 'Box',
+              title: 'RAM = Pracovní stůl',
+              subtitle: 'Operační paměť (8 až 64 GB)',
+              points: [
+                'Uchovává pouze data právě spuštěné hry či otevřené aplikace.',
+                'Při vypnutí počítače se stůl kompletně vyprázdní a uklidí!'
+              ]
+            }
+          },
+          {
+            id: 'hw-12',
+            type: 'split-image',
+            badge: 'TRVALÉ ÚLOŽIŠTĚ',
+            title: 'HDD vs. SSD: Gramofon proti čipu',
+            imageUrl: PRESET_IMAGES[2].url,
+            imageCaption: 'Mechanický pevný disk (HDD) vs. moderní polovodičové úložiště (M.2 SSD)',
+            points: [
+              { icon: 'Disc', title: 'HDD: Stará gramofonová deska', text: 'Rotující magnetické plotny (7 200 ot./min) a mechanická čtecí hlavička. Levné na obří zálohy, ale pomalé a náchylné na otřesy.' },
+              { icon: 'Zap', title: 'SSD: Bleskový tichý čip', text: 'Žádné pohyblivé součástky, pouze flash čipy. Až 50× vyšší rychlost, start systému za pár vteřin a odolnost proti pádům.' }
+            ]
+          },
+          {
+            id: 'hw-13',
+            type: 'cards-3',
+            badge: 'PŘEDSTAVA KAPACITY',
+            title: 'Jak velký je 1 Terabajt (1 TB)?',
+            analogy: 'Úložiště (SSD/HDD) funguje jako obří skříň, kde data zůstanou i po vytažení PC ze zásuvky.',
+            cards: [
+              { icon: 'Camera', highlight: '250 000', title: 'Fotografií', text: 'Tolik fotek ve vysoké kvalitě z vašeho mobilu se vejde na 1TB disk.' },
+              { icon: 'Film', highlight: '500 hodin', title: 'Filmů a videí', text: 'Stovky celovečerních filmů ve vysokém Full HD / 4K rozlišení.' },
+              { icon: 'BookOpen', highlight: '∞ Miliony', title: 'Textových dokumentů', text: 'Tolik stránek ve Wordu nebo PDF, že byste je nečetli ani za 10 životů.' }
+            ]
+          },
+          {
+            id: 'hw-14',
+            type: 'comparison',
+            badge: 'ZOBRAZOVACÍ JEDNOTKA',
+            title: 'Grafická karta (GPU): Bleskový malíř i mozek AI',
+            analogy: 'Zatímco procesor (CPU) je chytrý šéf, grafika (GPU) je armáda tisíců rychlých malířů.',
+            left: {
+              icon: 'Gamepad2',
+              title: 'Bleskový malíř her',
+              subtitle: '60 až 240+ obrazů za vteřinu (FPS)',
+              points: [
+                'Převádí herní kód na konkrétní barvy, stíny a pixely na monitoru.',
+                'Při hraní překreslí kompletní obrazovku každé mrknutí oka.'
+              ]
+            },
+            right: {
+              icon: 'Sparkles',
+              title: 'Grafické karty učí roboty!',
+              subtitle: 'Pohon pro Umělou Inteligenci',
+              points: [
+                'GPU zvládá miliony paralelních operací naráz lépe než běžný procesor.',
+                'Díky tisícům jader dnes na grafikách trénujeme modely jako ChatGPT.'
+              ]
+            }
+          },
+          {
+            id: 'hw-15',
+            type: 'comparison',
+            badge: 'NAPÁJENÍ A TERMOREGULACE',
+            title: 'Zdroj (PSU) a Chlazení počítače',
+            analogy: 'Kde teče spousta elektřiny, tam vzniká spousta tepla.',
+            left: {
+              icon: 'Zap',
+              title: 'Zdroj (PSU) = Elektrárna',
+              subtitle: 'Výkon udávaný ve Wattech (W)',
+              points: [
+                'Převádí 230 V ze zásuvky na bezpečné nízké napětí (12V) pro citlivé čipy.',
+                'Čím výkonnější grafiku máte, tím silnější a kvalitnější zdroj potřebujete.'
+              ]
+            },
+            right: {
+              icon: 'Fan',
+              title: 'Chlazení = Klimatizace',
+              subtitle: 'Vzduchové věže i vodní okruhy',
+              points: [
+                'Čipy se při práci potí – procesor přesahuje 80 °C a bez chladiče by shořel.',
+                'Chladíme ventilátory nebo vodním okruhem jako v motoru auta.'
+              ]
+            }
+          },
+          {
+            id: 'hw-16',
+            type: 'cards-3',
+            badge: 'VNĚJŠÍ SVĚT A PERIFERIE',
+            title: 'Konektory, Vstupní a Výstupní zařízení',
+            analogy: 'Jak my mluvíme s počítačem a jak počítač odpovídá nám?',
+            cards: [
+              { icon: 'Cable', highlight: 'Konektory', title: 'Dveře a okna PC', text: 'USB-C (oboustranný král na data i proud), HDMI / DisplayPort (obraz), LAN RJ-45 (internet) a Audio Jack.' },
+              { icon: 'Keyboard', highlight: 'Vstupní', title: 'Uši a oči počítače', text: 'Zařízení, kterými zadáváme příkazy dovnitř: Klávesnice, Myš, Mikrofon, Webkamera.' },
+              { icon: 'Monitor', highlight: 'Výstupní', title: 'Ústa počítače', text: 'Zařízení, kterými PC ukazuje výsledek nám: Monitor, Reproduktory, Sluchátka, Tiskárna.' }
+            ]
+          },
+          {
+            id: 'hw-17',
+            type: 'steps-4',
+            badge: 'PRAKTICKÝ PŘÍKLAD',
+            title: 'Jak to funguje dohromady? (Spuštění Minecraftu)',
+            steps: [
+              { step: 'KROK 1', icon: 'Mouse', title: 'Kliknutí myší', text: 'Vstupní zařízení vyšle elektrický signál po desce: "Spusť Minecraft!"' },
+              { step: 'KROK 2', icon: 'HardDrive', title: 'Příkaz Disku', text: 'Procesor (CPU) nařídí: přesuň data světa ze skříně (SSD) na pracovní stůl (RAM).' },
+              { step: 'KROK 3', icon: 'Cpu', title: 'Počítání fyziky', text: 'CPU spočítá pohyb vaší postavy, výbuch TNT a chování příšer.' },
+              { step: 'KROK 4', icon: 'Monitor', title: 'Blesková malba', text: 'Grafická karta (GPU) nakreslí 3D scénu a pošle ji kabelem na monitor.' }
+            ]
+          },
+          {
+            id: 'hw-18',
+            type: 'kahoot',
+            title: 'KAHOOT! Čas na ověření znalostí',
+            subtitle: 'Připravte si telefony, jdeme otestovat, jak znáte vnitřnosti počítače.',
+            question: 'Která paměť se kompletně vymaže v okamžiku, kdy počítač vypnete ze zásuvky?',
+            options: ['SSD disk (Velká skříň)', 'Operační paměť RAM (Pracovní stůl)', 'Flash disk v USB portu', 'DVD mechanika'],
+            correctIndex: 1
+          }
+        ]
+      },
+      {
+        id: 'os-zaklady',
+        title: 'Co je to Operační systém?',
+        subtitle: 'Dirigent, překladatel a vládce počítače – jak oživuje hardware a řídí stovky programů naráz.',
+        category: 'Operační systémy',
+        badge: 'ICT • Ročník 1',
+        icon: 'Layers',
+        updatedAt: '2025-02-18',
+        kahootUrl: 'https://create.kahoot.it/',
+        slides: [
+          {
+            id: 'os-1',
+            type: 'title',
+            badge: 'ICT',
+            icon: 'Layers',
+            title: 'Co je to Operační systém?\nDirigent a vládce počítače',
+            subtitle: 'Jak oživuje nehybný hardware a jak dokáže řídit stovky programů naráz?'
+          },
+          {
+            id: 'os-2',
+            type: 'comparison',
+            badge: 'SMYSL A VÝZNAM',
+            title: 'Představ si svět bez operačního systému',
+            analogy: 'Bez operačního systému by každý vývojář hry musel ručně programovat, jak se má točit větráček nebo blikat pixel na tisících různých monitorů.',
+            left: {
+              icon: 'Wrench',
+              title: 'Počátky počítačů (Bez OS)',
+              subtitle: 'Programátor musel znát každý drátek',
+              points: [
+                'Nutnost psát kód pro každý kabel a čip zvlášť.',
+                'Běžný stav: Spustit šel pouze jeden jediný program.',
+                'Změna tiskárny znamenala přepsat celý program od nuly.'
+              ]
+            },
+            right: {
+              icon: 'Sparkles',
+              title: 'Dnešní komfort s OS',
+              subtitle: 'Univerzální podlaha pro aplikace',
+              points: [
+                'Aplikace se vůbec nemusí starat o to, jaké máte železo.',
+                'Jednotnost: Minecraft běží bez ohledu na značku vaší RAM.',
+                'Pohodlí: Dvojklik myší stačí ke spuštění čehokoliv.'
+              ]
+            }
+          },
+          {
+            id: 'os-3',
+            type: 'cards-3',
+            badge: 'ARCHITEKTURA SYSTÉMU',
+            title: 'Tři hlavní role operačního systému',
+            analogy: 'Operační systém stojí jako neviditelný most mezi člověkem, aplikacemi a křemíkovým hardwarem.',
+            cards: [
+              { icon: 'Sliders', highlight: 'PILÍŘ 1', title: 'Správce zdrojů', text: 'Spravedlivě dělí čas procesoru a prostor v paměti RAM mezi všechny spuštěné aplikace.' },
+              { icon: 'Globe', highlight: 'PILÍŘ 2', title: 'Překladatel (Rozhraní)', text: 'Převádí lidská kliknutí myší a gesta na elektrické impulzy pro čipy.' },
+              { icon: 'Shield', highlight: 'PILÍŘ 3', title: 'Ochránce a policista', text: 'Nedovolí viru nebo spadlé hře poškodit ostatní soubory a shodit celý systém.' }
+            ]
+          },
+          {
+            id: 'os-4',
+            type: 'cards-3',
+            badge: 'SRDCE SYSTÉMU • ELI5 ANALOGIE',
+            title: 'Kernel (Jádro): Přísný kapitán na můstku lodi',
+            analogy: '1 šéf = žádný chaos v hardwaru. Aplikace spolu nesmějí bojovat o součástky, Kernel jim přiděluje čas jako nestranný rozhodčí.',
+            cards: [
+              { icon: 'Anchor', highlight: 'Kernel Mode', title: '1. Kapitánský můstek', text: 'Má v rukou kormidlo i motory lodi (procesor a paměť). Sem smí vstoupit jen kapitán osobně.' },
+              { icon: 'Users', highlight: 'User Mode', title: '2. Pasažéři na palubě', text: 'Běžné aplikace se baví na palubě. Když chtějí zatroubit sirénou (zvuk), musí slušně požádat kapitána.' },
+              { icon: 'Shield', highlight: 'Stabilita', title: '3. Záchrana před potopením', text: 'Pokud pasažérovi upadne zmrzlina (hra zamrzne), loď se nepotopí. Kapitán neposlušnou hru prostě ukončí.' }
+            ]
+          },
+          {
+            id: 'os-5',
+            type: 'cards-3',
+            badge: 'FASCINUJÍCÍ PRINCIP',
+            title: 'Multitasking: Velká iluze lidského oka',
+            analogy: 'Časové kvantum (10–20 ms): Procesor nedělá všechno naráz. Bleskově střídá programy po drobných kouskách času.',
+            cards: [
+              { icon: 'Headphones', highlight: '10 ms', title: '1. Písnička ve Spotify', text: 'Procesor bleskově dekóduje pár milisekund hudby a pošle je do sluchátek.' },
+              { icon: 'Mouse', highlight: '10 ms', title: '2. Pohyb kurzoru myši', text: 'V mžiku přepne pozornost na překreslení šipky myši a načtení webu.' },
+              { icon: 'Clock', highlight: 'Iluze', title: '3. Výsledek pro člověka', text: 'Střídání probíhá stokrát za vteřinu – lidské oko vnímá vše jako dokonale současný běh.' }
+            ]
+          },
+          {
+            id: 'os-6',
+            type: 'steps-4',
+            badge: 'START POČÍTAČE • KROK ZA KROKEM',
+            title: 'Bootování: Ranní budíček počítače za 10 vteřin',
+            steps: [
+              { step: '1. BUDÍČEK', icon: 'Zap', title: 'Stisk Power', text: 'Proud vteče ze zdroje do obvodů základní desky a komponenty PC se probouzejí.' },
+              { step: '2. KONTROLA', icon: 'Activity', title: 'Prohlídka dílů (POST)', text: 'Čip BIOS/UEFI ověří, zda žije procesor, paměti RAM, grafická karta a klávesnice.' },
+              { step: '3. HLEDÁNÍ', icon: 'Compass', title: 'Najití systému', text: 'Na rychlém SSD disku se najde zavaděč (Bootloader) a nahraje jádro OS do RAM.' },
+              { step: '4. VÍTEJTE', icon: 'Monitor', title: 'Plocha ožívá', text: 'Operační systém přebírá vládu, rozsvítí monitor a čeká na vaše heslo.' }
+            ]
+          },
+          {
+            id: 'os-7',
+            type: 'cards-3',
+            badge: 'SPRÁVA PAMĚTI',
+            title: 'Virtuální paměť & Swap: Záchranný kruh při plné RAM',
+            analogy: 'RAM > SSD: Swap zabrání pádu aplikace s chybou nedostatku paměti, ale platí se za to okamžitým zpomalením.',
+            cards: [
+              { icon: 'Box', highlight: '100 % plno', title: '1. Přeplněný pracovní stůl', text: 'Máte 16 GB RAM, ale otevřeli jste 60 záložek v prohlížeči společně s náročnou hrou.' },
+              { icon: 'HardDrive', highlight: 'pagefile.sys', title: '2. Odkládací soubor (Swap)', text: 'Operační systém chytře přesune neaktivní záložky z RAM na SSD disk.' },
+              { icon: 'AlertTriangle', highlight: 'Zpomalení', title: '3. Proč počítač drhne?', text: 'I nejrychlejší SSD je mnohonásobně pomalejší než RAM. Systém musí čekat na čtení z disku.' }
+            ]
+          },
+          {
+            id: 'os-8',
+            type: 'cards-3',
+            badge: 'KLÍČOVÉ ROZDÍLY V POHLEDU NA SVĚT',
+            title: 'Tři světy, tři úplně odlišné filozofie',
+            analogy: 'Desktopovým počítačům a serverům vládnou tři hlavní rodiny operačních systémů.',
+            cards: [
+              { icon: 'Gamepad2', highlight: '~70 % trhu', title: 'MS Windows (Kompatibilita)', text: 'Placený systém otevřený pro jakýkoliv hardware. Král her (DirectX), kanceláří a škol. Spustí i programy staré 25 let.' },
+              { icon: 'Smartphone', highlight: '20+ h výdrž', title: 'Apple macOS (Ekosystém)', text: 'Uzavřená zahrada ušitá na míru Macům (čipy M1/M2/M3). Dokonalé propojení s iPhonem, tichý chod, ale drahý a nelze vylepšovat.' },
+              { icon: 'Terminal', highlight: '0 Kč (Open)', title: 'Linux (Svoboda a servery)', text: '100% zdarma s otevřeným kódem. Stovky distribucí (Ubuntu, Mint, Kali, SteamOS). Bezpečná instalace přes repozitáře.' }
+            ]
+          },
+          {
+            id: 'os-9',
+            type: 'cards-3',
+            badge: 'NEUVĚŘITELNÁ ZAJÍMAVOST',
+            title: '100 % nejrychlejších superpočítačů běží na Linuxu',
+            analogy: 'Zatímco doma máme nejčastěji Windows, světový internet a vědu pohání tučňák.',
+            cards: [
+              { icon: 'Server', highlight: 'TOP 500', title: 'Všech 500 superpočítačů', text: 'Všech 500 nejvýkonnějších výzkumných monster světa pohání Linux. Ani jeden neběží na Windows.' },
+              { icon: 'Cloud', highlight: 'Cloud & Web', title: 'Pohon pro internet', text: 'YouTube, Instagram, Netflix, Google i banky spoléhají na stabilitu Linuxových serverů.' },
+              { icon: 'Rocket', highlight: 'NASA & SpaceX', title: 'Až na cizí planety', text: 'Marsovská helikoptéra Ingenuity od NASA i rakety Falcon 9 létají řízeny Linuxem!' }
+            ]
+          },
+          {
+            id: 'os-10',
+            type: 'comparison',
+            badge: 'SVĚT V KAPSE A KOMUNIKACE',
+            title: 'Mobilní systémy (Android vs. iOS) a Ovladače',
+            analogy: 'Chytrý telefon je plnohodnotný počítač v kapse. A každý nový kus hardwaru potřebuje svého tlumočníka.',
+            left: {
+              icon: 'Smartphone',
+              title: 'Android vs. Apple iOS',
+              subtitle: 'Kdo vládne chytrým telefonům?',
+              points: [
+                'Android (Google): Uvnitř tepe upravené jádro Linuxu. Pohání přes 70 % mobilů světa, vysoká svoboda úprav.',
+                'iOS (Apple): Přísně uzavřená zahrada vyladěná pro iPhone. Skvělá plynulost a přísná kontrola aplikací.'
+              ]
+            },
+            right: {
+              icon: 'Wrench',
+              title: 'Ovladače (Drivers) = Tlumočníci',
+              subtitle: 'Proč nestačí kabel jen zastrčit?',
+              points: [
+                'Windows neumí z výroby mluvit s 10 000 různými modely tiskáren a grafických karet.',
+                'Ovladač naučí systém přesný jazyk dané součástky (dnes často automaticky díky Plug and Play).'
+              ]
+            }
+          },
+          {
+            id: 'os-11',
+            type: 'comparison',
+            badge: 'JAK SYSTÉM OVLÁDÁME',
+            title: 'Okna proti Terminálu: GUI vs. Příkazový řádek (CLI)',
+            analogy: 'Stejný úkol můžete naklikat myší v oknech, nebo napsat jedním mocným textovým příkazem.',
+            left: {
+              icon: 'Monitor',
+              title: 'GUI (Grafické rozhraní)',
+              subtitle: 'Ikony, tlačítka, okna a kurzor myši',
+              points: [
+                'Pro koho: Ideální a intuitivní pro běžné uživatele.',
+                'Daň za luxus: Vykreslování oken žere část výkonu grafiky i paměti RAM.'
+              ]
+            },
+            right: {
+              icon: 'Terminal',
+              title: 'CLI (Terminál / Příkazová řádka)',
+              subtitle: 'Černá obrazovka a čistý textový příkaz',
+              points: [
+                'Superschopnost: Přejmenuje 10 000 fotek za 1 sekundu jedním řádkem kódu.',
+                'Volba profíků: Nulová zátěž hardwaru a snadná automatizace serverů.'
+              ]
+            }
+          },
+          {
+            id: 'os-12',
+            type: 'cards-3',
+            badge: 'SPRÁVA SOUBORŮ A BEZPEČNOST',
+            title: 'Vysypaný koš, Práva Admina a Modrá smrt',
+            analogy: 'Tři věci, které by měl o fungování operačního systému vědět každý uživatel:',
+            cards: [
+              { icon: 'Trash2', highlight: 'Rejstřík knihy', title: 'Proč se soubor nesmaže?', text: 'Vysypání koše nevymaže samotná data z disku! Smaže jen řádek z obsahu (rejstříku) a místo označí jako volné k přepsání.' },
+              { icon: 'Shield', highlight: 'User vs. Admin', title: 'Proč nemít plná práva?', text: 'Běžný účet nemůže smazat systém. Pokud ale virus chytí Administrátor (Root), infikuje celý počítač. Proto nás chrání UAC dialog.' },
+              { icon: 'AlertTriangle', highlight: 'BSOD = Brzda', title: 'Modrá smrt je záchrana!', text: 'Blue Screen of Death není zrada, ale záchranná brzda. Kernel raději zmrazí PC, než aby vadný ovladač či RAM zničily vaše fotky.' }
+            ]
+          },
+          {
+            id: 'os-13',
+            type: 'cards-3',
+            badge: 'HISTORICKÁ ZÁHADA',
+            title: 'Proč je hlavní disk C:? Kam zmizela písmena A: a B:?',
+            analogy: 'Všimli jste si někdy, že ve Windows začíná číslování pevných disků až třetím písmenem abecedy?',
+            cards: [
+              { icon: 'Disc', highlight: 'PÍSMENO A:', title: 'První disketová mechanika', text: 'V pravěku PC nebyly pevné disky. Systém se startoval z plastové pružné diskety v mechanice A:.' },
+              { icon: 'Copy', highlight: 'PÍSMENO B:', title: 'Druhá disketovka', text: 'Aby lidé nemuseli diskety neustále přehazovat při kopírování her, dostala druhá mechanika písmeno B:.' },
+              { icon: 'HardDrive', highlight: 'PÍSMENO C:', title: 'První pevný disk', text: 'Když se konečně objevil velký pevný disk uvnitř skříně, zbylo na něj písmeno C:. Tradice zůstala dodnes!' }
+            ]
+          },
+          {
+            id: 'os-14',
+            type: 'kahoot',
+            title: 'KAHOOT! Čas na ověření znalostí',
+            subtitle: 'Otestujte si, jak rozumíte jádru operačního systému, multitaskingu a bezpečnosti.',
+            question: 'Co se ve skutečnosti stane na disku, když vysypete Koš ve Windows?',
+            options: ['Laser okamžitě vypálí nuly na místo souboru', 'Smaže se pouze záznam v rejstříku (obsahu), data tam leží dál do přepsání', 'Soubor se tajně odešle na server Microsoftu', 'Počítač musí zformátovat celý disk C:'],
+            correctIndex: 1
+          }
+        ]
+      },
+      {
+        id: 'hw-parametry-1',
+        title: 'Jak číst parametry hardwaru? (Část 1)',
+        subtitle: 'Procesor, Základní deska a Operační paměť RAM – nenechte se napálit marketingem.',
+        category: 'Hardware',
+        badge: 'ICT • Pokročilí',
+        icon: 'Sliders',
+        updatedAt: '2025-02-20',
+        kahootUrl: 'https://create.kahoot.it/',
+        slides: [
+          {
+            id: 'p1-1',
+            type: 'title',
+            badge: 'ICT • ČÁST 1',
+            icon: 'Cpu',
+            title: 'Jak číst parametry hardwaru?\nProcesor, RAM a Základní deska',
+            subtitle: 'Naučte se rozumět zkratkám GHz, IPC, CL, TDP a PCIe, abyste neutráceli tisíce za marketingové pasti.'
+          },
+          {
+            id: 'p1-2',
+            type: 'cards-3',
+            badge: 'PRVNÍ DOJEM KLAME',
+            title: 'Proč nestačí nápis „Herní počítač“?',
+            analogy: 'Přirovnání: Koupit si starou rezavou Škodu Favorit, nalepit na ni závodní pruhy, přidat neonové podsvícení a tvrdit, že jde o supersport na okruhu.',
+            cards: [
+              { icon: 'Sparkles', highlight: '0 FPS navíc', title: 'RGB světýlka', text: 'Blikající větráčky ani průhledná skleněná bočnice nepřidají ve hře ani 1 FPS navíc. Výkon je vždy ukryt v čipech.' },
+              { icon: 'AlertTriangle', highlight: '12 let starý', title: 'Past letáků', text: '„16jádrový herní PC“ z inzerátu může být 12 let starý procesor z vyřazeného serveru, na kterém se seká i Minecraft.' },
+              { icon: 'Crosshair', highlight: 'GHz • CL • TDP', title: 'Cíl dnešní hodiny', text: 'Naučit se číst reálné technické zkratky, abys při nákupu neutrácel tisíce za zbytečnosti a zastaralé součástky.' }
+            ]
+          },
+          {
+            id: 'p1-3',
+            type: 'section',
+            badge: 'KOMPONENTA 01',
+            icon: 'Cpu',
+            title: 'Procesor (CPU)',
+            subtitle: 'Mozek celého počítače: Frekvence, jádra, architektura, vyrovnávací paměť Cache a krocení provozních teplot.'
+          },
+          {
+            id: 'p1-4',
+            type: 'cards-3',
+            badge: 'PROCESOR • ZÁKLADNÍ RYCHLOST',
+            title: 'Takt v Gigahertzích (GHz): Jak rychle šlapeš?',
+            analogy: 'Přirovnání: Frekvence je jako cyklista na rotopedu. Udává, kolikrát za vteřinu otočí pedály dokola. Čím rychleji točí nohama, tím víc práce stihne.',
+            cards: [
+              { icon: 'Activity', highlight: '1 GHz', title: 'Výpočetní cykly', text: 'Udává počet základních výpočetních kmitů za vteřinu. 1 GHz = přesně 1 miliarda operací za sekundu.' },
+              { icon: 'Zap', highlight: '3.5–5.8 GHz', title: 'Moderní standard', text: 'Běžná frekvence dnešních herních čipů. Procesor tiká tempem téměř 6 miliard kmitů za sekundu.' },
+              { icon: 'Info', highlight: 'Pozor!', title: 'Důležité varování', text: 'Samotné Gigahertzy neurčují celkový výkon! Záleží na tom, kolik práce čip stihne v rámci jednoho otočení pedálem.' }
+            ]
+          },
+          {
+            id: 'p1-5',
+            type: 'cards-3',
+            badge: 'PROCESOR • AUTOMATICKÉ ŘAZENÍ',
+            title: 'Base vs. Boost: Běžná chůze vs. Nitro',
+            analogy: 'Přirovnání: Base Clock je klidný krok, kterým dojdeš do školy bez zadýchání. Boost Clock je sprint na 100 m, když ti ujíždí autobus.',
+            cards: [
+              { icon: 'Clock', highlight: '~2.8 GHz', title: 'Base Clock (Základ)', text: 'Stabilní úsporný takt při psaní ve Wordu, brouzdání na webu nebo YouTube. Šetří energii a procesor nehřeje.' },
+              { icon: 'Rocket', highlight: '~5.2 GHz', title: 'Boost / Turbo Clock', text: 'Krátkodobé vystřelení frekvence na maximum při načítání náročné herní mapy nebo složitém výpočtu.' },
+              { icon: 'Fan', highlight: 'Teplota!', title: 'Podmínka Boostu', text: 'Procesor zrychlí jen tehdy, pokud je dostatečně chladný. Se špatným chladičem vysoký Boost neudrží.' }
+            ]
+          },
+          {
+            id: 'p1-6',
+            type: 'cards-3',
+            badge: 'PROCESOR • MULTITASKING',
+            title: 'Jádra procesoru: Kolik kuchařů vaří?',
+            analogy: 'Přirovnání: Jedno jádro = jeden kuchař. 8 kuchařů uvaří 8 jídel naráz. Pokud ale zákazník chce jednu obří pizzu, 8 kuchařů ji rychleji neupeče – musí pracovat jeden rychlý!',
+            cards: [
+              { icon: 'Gamepad2', highlight: '6 až 8 jader', title: 'Ideál pro hry', text: 'Zlatý střed dnešních herních počítačů. Hry vyžadují hlavně vysoký výkon na jednotlivých jádrech, ne desítky jader.' },
+              { icon: 'Film', highlight: '12 až 16+ jader', title: 'Pracovní stanice', text: 'Excelují při střihu 4K videa, 3D renderování nebo když máš otevřených 40 tabů a streamuješ.' },
+              { icon: 'AlertTriangle', highlight: 'Kvalita > Počet', title: 'Past počtu jader', text: '16 slabých starých jader prohraje s moderním 6jádrem v jakékoliv současné hře na celé čáře.' }
+            ]
+          },
+          {
+            id: 'p1-7',
+            type: 'cards-3',
+            badge: 'PROCESOR • CHYTROST ČIPU A DĚLBA PRÁCE',
+            title: 'Generace (IPC), P-Cores & E-Cores a Vlákna',
+            analogy: 'Dělník s lopatou (starý čip na 5 GHz) prohraje s velkým bagrem (nový čip na 4 GHz). A na tahání uhlí neplýtváš dostihovým koněm!',
+            cards: [
+              { icon: 'Award', highlight: 'IPC & Generace', title: 'Lopata vs. Velký bagr', text: 'IPC (Instructions Per Clock) udává, kolik práce čip stihne za 1 takt. Novější generace (např. Ryzen 7000/9000, Core 14. gen) je vždy chytřejší.' },
+              { icon: 'Sliders', highlight: 'P-Cores & E-Cores', title: 'Závodník a poník', text: 'Velká P-Cores táhnou samotnou hru. Malá úsporná E-Cores na pozadí tiše řeší Windows, Discord a stahování ze Steamu.' },
+              { icon: 'Activity', highlight: '8C / 16T (SMT)', title: 'Vlákna = Dvě ruce dělníka', text: 'Jedno fyzické jádro krmí dvěma rukama dvě úlohy naráz. Přináší +25 % výkonu bez nutnosti dalších křemíkových jader.' }
+            ]
+          },
+          {
+            id: 'p1-8',
+            type: 'cards-3',
+            badge: 'PROCESOR • CACHE A TEPLOTA',
+            title: 'Cache paměť, TDP ve Wattech a Thermal Throttling',
+            analogy: 'Klíče nosíš v kapse u kalhot (Cache), ne v batohu (RAM). A když běžíš v létě maraton a přehřeješ se, tělo tě donutí zpomalit do chůze!',
+            cards: [
+              { icon: 'Database', highlight: '32–96 MB L3', title: 'Cache (3D V-Cache)', text: 'Extrémně rychlá paměť přímo na čipu. Procesory s obří 96MB L3 Cache (např. modely X3D) drtí konkurenci ve hrách.' },
+              { icon: 'Flame', highlight: '65–250 W TDP', title: 'Kolik tepla vyrobí?', text: 'Thermal Design Power udává, jak výkonný chladič musíš koupit. Notebooky mají 15–45 W, stolní herní CPU až 250 W.' },
+              { icon: 'AlertTriangle', highlight: '95–100 °C', title: 'Thermal Throttling', text: 'Záchranná brzda! Při přehřátí procesor prudce shodí takt, aby neshořel. Ve hře nastane brutální propad ze 140 FPS na 15 FPS.' }
+            ]
+          },
+          {
+            id: 'p1-9',
+            type: 'section',
+            badge: 'KOMPONENTA 02',
+            icon: 'Layers',
+            title: 'Základní deska (Motherboard)',
+            subtitle: 'Páteř a nervová soustava: Správný socket, čipset, rozměry desky a dálnice PCIe linek pro grafiku a disky.'
+          },
+          {
+            id: 'p1-10',
+            type: 'cards-3',
+            badge: 'ZÁKLADNÍ DESKA • PATICE A VÝBAVA',
+            title: 'Socket (Klíč a zámek) & Čipset (Ředitel dopravy)',
+            analogy: 'Britskou nabíječku do české zásuvky nestrčíš (Socket). A čipset určuje, jestli je deska malý kruháč nebo osmiproudá dálnice.',
+            cards: [
+              { icon: 'Key', highlight: 'AM5 / LGA1700', title: 'Socket (Patice CPU)', text: 'Intel a AMD mají zcela odlišné patice. Procesor a deska musí mít na krabici 100% shodný název socketu!' },
+              { icon: 'Compass', highlight: 'Řada B (Ideál)', title: 'Čipset: A/H vs. B vs. Z/X', text: 'Řada A/H je levná kancelář. Řada B (např. B650, B760) je zlatý střed pro 85 % hráčů. Řada Z/X je pro extrémní taktování.' },
+              { icon: 'Box', highlight: 'ATX / mATX / ITX', title: 'Form Factor (Velikost)', text: 'ATX je velký dům se 4 sloty RAM. Micro-ATX je nejoblíbenější zlatý střed. Mini-ITX je drahá garsonka do miniaturních skříní.' }
+            ]
+          },
+          {
+            id: 'p1-11',
+            type: 'cards-3',
+            badge: 'ZÁKLADNÍ DESKA • SBĚRNICE PCIE',
+            title: 'PCIe sloty a Generace: Počet pruhů a rychlost na dálnici',
+            analogy: 'PCIe x1 je cyklostezka, x16 je 16proudá dálnice pro kamiony (grafiku). A každá nová generace zdvojnásobuje povolenou rychlost!',
+            cards: [
+              { icon: 'Truck', highlight: 'PCIe x16', title: 'Kam patří grafika?', text: 'Grafická karta patří VŽDY do nejvyššího dlouhého slotu PCIe x16, protože ten vede přímo do procesoru bez zpoždění.' },
+              { icon: 'Zap', highlight: 'Gen 4.0 vs 5.0', title: 'Rychlostní limity', text: 'Každá generace zdvojnásobuje rychlost: Gen 3 (1 GB/s na linku) -> Gen 4 (2 GB/s) -> Gen 5 (4 GB/s, tedy až 64 GB/s v x16!).' },
+              { icon: 'HardDrive', highlight: 'M.2 sloty', title: 'Dálnice pro SSD disky', text: 'Moderní desky mají 2 až 4 sloty M.2 napojené na PCIe linky pro bleskové NVMe SSD disky bez kabelů.' }
+            ]
+          },
+          {
+            id: 'p1-12',
+            type: 'section',
+            badge: 'KOMPONENTA 03',
+            icon: 'Box',
+            title: 'Operační paměť (RAM)',
+            subtitle: 'Pracovní stůl procesoru: Kapacita v GB, rychlost v MT/s, latence CL, výhoda Dual-Channelu a zapnutí profilu XMP/EXPO.'
+          },
+          {
+            id: 'p1-13',
+            type: 'cards-3',
+            badge: 'OPERAČNÍ PAMĚŤ • PARAMETRY',
+            title: 'Kapacita (GB), Frekvence (MT/s) a Latence (CL)',
+            analogy: 'Kapacita je velikost stolu. Frekvence je rychlost pásu u pokladny. Latence (CL) říká, jak dlouho ospalý číšník zírá do zdi, než vůbec vstane!',
+            cards: [
+              { icon: 'Layers', highlight: '16 vs. 32 GB', title: 'Velikost stolu', text: '8 GB je dnes málo. 16 GB je nutné minimum, 32 GB je současný ideál pro moderní hry, Discord a prohlížeč.' },
+              { icon: 'Activity', highlight: 'DDR4 vs. DDR5', title: 'Rychlost pásu (MT/s)', text: 'DDR4 běží na 3200–3600 MT/s. Nové DDR5 sviští na 6000+ MT/s a krmí procesor dvojnásobným tokem dat.' },
+              { icon: 'Coffee', highlight: 'CL30 > CL40', title: 'CAS Latency (CL)', text: 'Obrácená logika: Čím NIŽŠÍ číslo CL, tím lépe! Paměť DDR5 6000 MHz s CL30 reaguje mnohem svižněji než CL40.' }
+            ]
+          },
+          {
+            id: 'p1-14',
+            type: 'comparison',
+            badge: 'OPERAČNÍ PAMĚŤ • ZAPOJENÍ A NASTAVENÍ',
+            title: 'Dual-Channel (Dvě ruce) & XMP / EXPO (Sport režim)',
+            analogy: 'Nákup z auta vyložíš dvěma rukama za poloviční čas než jednou. A sportovní auto má z továrny zapnutý omezovač na 80 km/h!',
+            left: {
+              icon: 'CheckCircle',
+              title: 'Dual-Channel: Vždy 2 moduly!',
+              subtitle: '2× 8 GB nebo 2× 16 GB (Sloty 2 a 4)',
+              points: [
+                'Chyba: Koupit 1× 16 GB sníží šířku sběrnice na polovinu a brzdí procesor.',
+                'Správně: 2 moduly obsluhují data dvěma kanály naráz (+15 až 20 % FPS ve hrách!).'
+              ]
+            },
+            right: {
+              icon: 'Rocket',
+              title: 'XMP / EXPO: Tlačítko Sport v BIOSu',
+              subtitle: '70 % lidí zapomíná odemknout rychlost',
+              points: [
+                'Koupíš 6000MHz RAM, ale po zapojení běží jen na nouzových 4800 MHz.',
+                'Musíš v BIOSu jedním klikem zapnout profil XMP (Intel) nebo EXPO (AMD)!'
+              ]
+            }
+          },
+          {
+            id: 'p1-15',
+            type: 'summary',
+            badge: 'ZÁVĚREČNÉ SHRNUTÍ • BOTTLE-NECK & TAHÁK',
+            title: 'Pozor na Bottleneck (Úzké hrdlo) a Nákupní tahák',
+            boxes: [
+              {
+                icon: 'AlertTriangle',
+                title: 'Bottleneck (Úzké hrdlo láhve)',
+                items: [
+                  'Řetěz je jen tak silný, jak silný je jeho nejslabší článek.',
+                  'Grafika za 30 000 Kč připojená k 10 let starému CPU nebo 8 GB RAM bude zívat nudou.',
+                  'Vždy stavěj vyváženou sestavu!'
+                ]
+              },
+              {
+                icon: 'Cpu',
+                title: 'Tahák: Procesor & Deska',
+                items: [
+                  'Sleduj moderní generaci a IPC, nejen GHz.',
+                  'Pro hry 6 až 8 rychlých jader s velkou L3 Cache.',
+                  '100% shoda socketu a zlatá střední cesta čipsetu B-série.'
+                ]
+              },
+              {
+                icon: 'Box',
+                title: 'Tahák: Operační paměť RAM',
+                items: [
+                  'Vždy 2 moduly do Dual-Channelu (obvykle 2. a 4. slot od CPU).',
+                  'Ideálně 32 GB (2× 16 GB) s vysokým taktem a nízkým CL.',
+                  'V BIOSu ihned po stavbě zapnout XMP / EXPO!'
+                ]
+              }
+            ]
+          },
+          {
+            id: 'p1-16',
+            type: 'kahoot',
+            title: 'KAHOOT! Čas na ověření znalostí (Část 1)',
+            subtitle: 'Dokážete odhalit nevýhodnou sestavu a vybrat správný procesor s RAMkou?',
+            question: 'Která kombinace operační paměti RAM nabídne ve hrách nejvyšší výkon?',
+            options: ['1× 16 GB DDR5 4800 MHz CL40 (v prvním slotu)', '2× 8 GB DDR5 6000 MHz CL30 (Dual-Channel se zapnutým XMP/EXPO)', '1× 32 GB DDR4 2666 MHz CL22', 'Na počtu modulů ani CL vůbec nezáleží'],
+            correctIndex: 1
+          }
+        ]
+      },
+      {
+        id: 'hw-parametry-2',
+        title: 'Jak číst parametry hardwaru? (Část 2)',
+        subtitle: 'Grafika, Úložiště, Zdroj, Skříň, Monitor a Periferie – pasti na peněženku.',
+        category: 'Hardware',
+        badge: 'ICT • Pokročilí',
+        icon: 'Gamepad2',
+        updatedAt: '2025-02-22',
+        kahootUrl: 'https://create.kahoot.it/',
+        slides: [
+          {
+            id: 'p2-1',
+            type: 'title',
+            badge: 'ICT • ČÁST 2',
+            icon: 'Gamepad2',
+            title: 'Jak číst parametry hardwaru?\nGrafika, Disk, Zdroj a Monitor',
+            subtitle: 'Druhá polovina počítače: Proč „4 GB grafika“, „1000W zdroj za 800 Kč“ a „1ms monitor“ bývají nebezpečné marketingové triky.'
+          },
+          {
+            id: 'p2-2',
+            type: 'cards-3',
+            badge: 'VELKÁ ČÍSLA NA KRABICÍCH',
+            title: 'Proč „4 GB grafika“ a „1000W zdroj“ nemusí znamenat nic?',
+            analogy: 'Přirovnání: Vybírat auto jen podle toho, jak velký má kufr. Dodávka sice odveze hodně věcí, ale na závodním okruhu proti sporťáku neuspěje.',
+            cards: [
+              { icon: 'AlertTriangle', highlight: 'Starý čip', title: 'Past levné VRAM', text: 'Kancelářská grafika z roku 2014 za pár stovek může mít klidně 4 GB paměti, ale v moderních hrách nerozběhne ani menu.' },
+              { icon: 'Flame', highlight: 'Nebezpečí!', title: 'Časovaná bomba', text: 'Zdroj s velkým nápisem „1000 W“ za 800 Kč z pochybného e-shopu je přímá poukázka na zničení komponent a požár.' },
+              { icon: 'Crosshair', highlight: 'Praxe', title: 'Cíl dnešní hodiny', text: 'Vybrat grafiku podle čipu, rozeznat kvalitní TLC NVMe SSD, bezpečný zdroj a monitor s reálnými barvami i odezvou.' }
+            ]
+          },
+          {
+            id: 'p2-3',
+            type: 'comparison',
+            badge: 'KOMPONENTA 04 • GRAFICKÁ KARTA (GPU)',
+            title: 'CPU vs. GPU: Špičkový chirurg vs. Montážní linka',
+            analogy: 'CPU je chirurg provádějící jednu složitou operaci. GPU je tovární linka s tisíci dělníky, kteří zašroubují tisíce šroubků v tutéž milisekundu.',
+            left: {
+              icon: 'Cpu',
+              title: 'CPU: Sériový génius',
+              subtitle: '6 až 16 silných jader',
+              points: [
+                'Zvládá komplexní logiku, herní pravidla a systémové úlohy krok za krokem.',
+                'Vysoký takt, ale malý počet jader.'
+              ]
+            },
+            right: {
+              icon: 'Layers',
+              title: 'GPU: Masivní paralelismus',
+              subtitle: '3 000 až 16 000+ CUDA / Stream jader',
+              points: [
+                'Počítá osvětlení, stíny a barvu pro miliony pixelů na obrazovce současně.',
+                'Hrubý výkon určuje architektura čipu (např. RTX 4070 vs 4060), nikoliv jen velikost paměti!'
+              ]
+            }
+          },
+          {
+            id: 'p2-4',
+            type: 'cards-3',
+            badge: 'GRAFICKÁ KARTA • PAMĚŤ, SBĚRNICE A SPOTŘEBA',
+            title: 'VRAM (GB), Šířka sběrnice (bity) a TGP v noteboocích',
+            analogy: 'VRAM je velikost nádrže, sběrnice je průměr hasičské hadice (128-bit vs 256-bit) a TGP v notebooku určuje, kolik paliva motor skutečně dostane!',
+            cards: [
+              { icon: 'Database', highlight: '12–16 GB VRAM', title: 'Velikost grafické paměti', text: '4–6 GB už nestačí. 8 GB je hrana přežití pro Full HD. 12 až 16 GB je dnešní zlatý standard pro QHD (1440p) a ostré textury.' },
+              { icon: 'Sliders', highlight: '192–256 bitů', title: 'Šířka sběrnice (Průtok)', text: 'Sebevětší nádrž (16 GB) je k ničemu, když z ní vede úzké brčko (128-bit). Pro vyšší rozlišení hledej širší sběrnici.' },
+              { icon: 'Smartphone', highlight: '45 W vs. 140 W', title: 'Past notebooků (TGP)', text: 'Stejný čip "RTX 4060" má v tenkém laptopu limit 45 W (poloviční výkon!) a v pořádném herním notebooku 140 W. Vždy hledej údaj TGP!' }
+            ]
+          },
+          {
+            id: 'p2-5',
+            type: 'cards-3',
+            badge: 'GRAFICKÁ KARTA • MODERNÍ ZBRANĚ',
+            title: 'DLSS a FSR: Inteligentní AI dopočet obrazu',
+            analogy: 'Přirovnání: Funguje jako noční režim u moderních fotomobilů – grafika vyfotí scénu bleskově v nižším rozlišení a umělá inteligence dopočítá detaily.',
+            cards: [
+              { icon: 'Sparkles', highlight: '+50 až 100 % FPS', title: 'AI Super Resolution', text: 'NVIDIA DLSS, AMD FSR a Intel XeSS renderují hru v nižším rozlišení a chytrým algoritmem ji doostří do 1440p nebo 4K.' },
+              { icon: 'Film', highlight: 'Frame Gen', title: 'Generování mezisnímků', text: 'Neuronová síť umí nakreslit celé nové snímky mezi dvěma reálnými, čímž zdvojnásobí plynulost obrazu.' },
+              { icon: 'Eye', highlight: 'Ostrý obraz', title: 'Věrnost detailů', text: 'Dnešní AI rekonstruuje hrany tak precizně, že lidské oko v pohybu často nepozná rozdíl od nativního rozlišení.' }
+            ]
+          },
+          {
+            id: 'p2-6',
+            type: 'cards-3',
+            badge: 'KOMPONENTA 05 • PEVNÉ DISKY A SSD',
+            title: 'Vývoj rychlostí, IOPS, Životnost (TBW) a DRAM Cache',
+            analogy: 'Sekvenční rychlost (MB/s) je převoz jednoho obřího kontejneru. IOPS je pošťák roznášející 1 000 dopisů po městě. A buňka TLC vydrží mnohem víc než levná QLC!',
+            cards: [
+              { icon: 'Zap', highlight: '5 000+ MB/s', title: 'HDD -> SATA -> M.2 NVMe', text: 'HDD (120 MB/s) je historie. Kabelové SATA SSD končí na 550 MB/s. Moderní M.2 NVMe PCIe disky čtou rychlostí 5 000 až 14 000 MB/s!' },
+              { icon: 'Activity', highlight: 'IOPS & DRAM', title: 'Proč systém nesmí drhnout', text: 'Vysoké IOPS (práce s malými soubory) a vlastní DRAM Cache (mapa v paměti disku) zaručují, že se PC nezasekne ani při stahování ze Steamu.' },
+              { icon: 'Shield', highlight: 'TLC > QLC', title: 'Životnost buněk (TBW)', text: 'Hledej disky s čipy TLC a vysokým TBW (300–1200 TB přepisů). Levná QLC SSD se po zaplnění cache zpomalí pod úroveň starého HDD!' }
+            ]
+          },
+          {
+            id: 'p2-7',
+            type: 'split-image',
+            badge: 'KOMPONENTA 06 • NAPÁJECÍ ZDROJ (PSU)',
+            title: 'Výkon s rezervou, 80 PLUS účinnost a Ochrany',
+            imageUrl: PRESET_IMAGES[4].url,
+            imageCaption: 'Přehled certifikací účinnosti 80 PLUS při 50% zatížení zdroje',
+            points: [
+              { icon: 'Zap', title: 'Nosnost mostu (Rezerva 20–30 %)', text: 'Sečti spotřebu CPU + GPU + 100 W a přidej 30 % rezervu. Zdroj je nejtišší a nejúčinnější při 50–60% zátěži.' },
+              { icon: 'Award', title: '80 PLUS Gold = Zlatý standard', text: 'Dobře zateplený dům: 90 % elektřiny ze zásuvky jde do čipů a jen 10 % unikne jako odpadní teplo.' },
+              { icon: 'Shield', title: 'Airbagy (OVP, OPP, SCP) & ATX 3.0', text: 'Zkratová a přepěťová pojistka zachrání PC při bouřce. Nový kabel 12VHPWR (600 W) musí být vždy zacvaknutý nadoraz!' }
+            ]
+          },
+          {
+            id: 'p2-8',
+            type: 'cards-3',
+            badge: 'KOMPONENTA 07 • SKŘÍŇ A CHLAZENÍ',
+            title: 'Airflow: Funkční tričko vs. Neprodyšná pláštěnka',
+            analogy: 'Běhat v létě v prodyšném tričku (Mesh síťovina) je radost. Běhat v igelitové pláštěnce (celoskleněné čelo skříně) znamená úpal do pěti minut.',
+            cards: [
+              { icon: 'Fan', highlight: 'Mesh čelo', title: 'Perforovaný předek', text: 'Vzduch musí volně proudit zepředu dozadu a nahoru. Plné sklo vepředu komponenty udusí ve vlastním horku.' },
+              { icon: 'Shield', highlight: 'Mírný přetlak', title: 'Zbraň proti prachu', text: 'Více vzduchu nasáváme přes prachové filtry (např. 2–3 větráky vepředu) než vyfukujeme vzadu (1 větrák). Prach pak neleze škvírami.' },
+              { icon: 'CheckCircle', highlight: '-15 °C dolů', title: 'Ticho a plný Boost', text: 'Kvalitní průvan sníží teploty o 15 °C, ztiší celý počítač a udrží maximální Boost frekvence.' }
+            ]
+          },
+          {
+            id: 'p2-9',
+            type: 'cards-3',
+            badge: 'KOMPONENTA 08 • HERNÍ MONITOR',
+            title: 'Rozlišení (PPI), Obnovovací frekvence (Hz) a Panely',
+            analogy: 'Rozlišení je jemnost tisku fotoknihy. Hertzy (Hz) určují plynulost filmu. A pozor na marketingovou lež „1 ms“ u levných monitorů!',
+            cards: [
+              { icon: 'Monitor', highlight: '27" = QHD', title: 'Rozlišení podle úhlopříčky', text: 'Full HD (1080p) stačí jen do 24". Pro 27 palců je zlatým středem ostré QHD (1440p). 4K vyžaduje extrémně drahou grafiku.' },
+              { icon: 'Activity', highlight: '144–180 Hz', title: 'Plynulost a G-Sync/FreeSync', text: '60 Hz je jen do kanceláře. Herní základ je 144+ Hz se synchronizací FreeSync/G-Sync proti vodorovnému trhání obrazu (Tearing).' },
+              { icon: 'Eye', highlight: 'IPS vs. OLED', title: 'Typ zobrazovacího panelu', text: 'IPS je univerzál s věrnými barvami (80 % hráčů). VA má hlubokou černou, ale maže pohyb. OLED je král s nekonečným kontrastem.' }
+            ]
+          },
+          {
+            id: 'p2-10',
+            type: 'comparison',
+            badge: 'KOMPONENTA 09 • HERNÍ PERIFERIE',
+            title: 'Myš (DPI a Polling Rate) & Klávesnice (Mechanické spínače)',
+            analogy: 'Extrémní DPI je jako držet dalekohled v roztřesené ruce. A membránová klávesnice je jako mačkat gumové tlačítko mikrovlnky.',
+            left: {
+              icon: 'Mouse',
+              title: 'Herní myš: Marketing 26 000 DPI',
+              subtitle: 'Rozhoduje přesný optický senzor',
+              points: [
+                'Profesionální esportovci hrají na nízkých 800 až 1 600 DPI pro přesný tah paží!',
+                'Polling Rate 1 000 Hz hlásí polohu myši každou 1 milisekundu bez zpoždění.'
+              ]
+            },
+            right: {
+              icon: 'Keyboard',
+              title: 'Mechanická klávesnice',
+              subtitle: 'Spíná v polovině stisku jako klavír',
+              points: [
+                'Red (Lineární): Hladký a tichý chod – nejoblíbenější na akční hry.',
+                'Blue (Klikací): Hlasité psaní, na Discordu vás budou spoluhráči nenávidět.',
+                'Brown (Taktilní): Univerzální kompromis s jemným hmatovým lupnutím.'
+              ]
+            }
+          },
+          {
+            id: 'p2-11',
+            type: 'summary',
+            badge: 'ZÁVĚREČNÉ SHRNUTÍ • DRUHÁ POLOVINA PC',
+            title: 'Nákupní tahák: Grafika, Disk, Zdroj a Monitor',
+            boxes: [
+              {
+                icon: 'Gamepad2',
+                title: 'Grafická karta & SSD',
+                items: [
+                  'GPU vybírej podle čipu a testů, hledej 12–16 GB VRAM a u notebooků hlídej watty (TGP)!',
+                  'Do PC patří výhradně M.2 NVMe SSD s čipy TLC (300+ TBW).'
+                ]
+              },
+              {
+                icon: 'Zap',
+                title: 'Napájecí zdroj & Skříň',
+                items: [
+                  'Na zdroji nikdy nešetři! Certifikace 80 PLUS Gold, ověřená značka a 30% rezerva.',
+                  'Skříň musí mít perforované (Mesh) čelo pro volný průchod vzduchu.'
+                ]
+              },
+              {
+                icon: 'Monitor',
+                title: 'Monitor & Periferie',
+                items: [
+                  'Zlatý standard: 27 palců, QHD (1440p), IPS nebo OLED panel, 144–180 Hz a FreeSync/G-Sync.',
+                  'Myš s kvalitním senzorem (800–1600 DPI) a mechanická klávesnice (Red/Brown).'
+                ]
+              }
+            ]
+          },
+          {
+            id: 'p2-12',
+            type: 'kahoot',
+            title: 'KAHOOT! Čas na ověření znalostí (Část 2)',
+            subtitle: 'Dokážete odhalit nebezpečný zdroj, pomalý disk a falešný herní notebook?',
+            question: 'Proč může mít notebook s grafikou RTX 4060 o polovinu nižší výkon než jiný notebook se stejnou RTX 4060?',
+            options: ['Protože má menší úhlopříčku displeje', 'Kvůli nízkému limitu spotřeby TGP (např. seškrcených 45 W místo plných 140 W)', 'Protože nemá podsvícenou RGB klávesnici', 'Všechny RTX 4060 mají na světě úplně stejný výkon'],
+            correctIndex: 1
+          }
+        ]
+      }
+    ];
+
+    const INITIAL_RESOURCES = [
+      {
+        id: 'res-1',
+        title: 'Nákupní tahák: Jak poskládat vyvážené PC (PDF přehled)',
+        category: 'Hardware',
+        type: 'Tahák do hodiny',
+        description: 'Jednostránkový přehled všech klíčových parametrů (Socket, RAM Dual-Channel, TLC SSD, 80 PLUS Gold) pro studenty.',
+        url: '#tahak'
+      },
+      {
+        id: 'res-2',
+        title: 'Praktické cvičení: Odhal podvodný inzerát na Bazoši',
+        category: 'Hardware',
+        type: 'Pracovní list',
+        description: 'Studenti mají za úkol najít 3 reálné inzeráty na "Ultra herní PC" a pomocí parametrů odhalit starou generaci CPU nebo nebezpečný zdroj.',
+        url: '#cviceni'
+      },
+      {
+        id: 'res-3',
+        title: 'Terminálová výzva: Základní příkazy v Linuxu a Windows CLI',
+        category: 'Operační systémy',
+        type: 'Cvičení u PC',
+        description: 'Seznam 10 úkolů v příkazové řádce (cd, ls/dir, mkdir, ping, ipconfig) pro pochopení rozdílu mezi GUI a CLI.',
+        url: '#terminal'
+      }
+    ];
+
+    // ============================================================================
+    // 3. VYKRESLOVACÍ JÁDRO SLAJDŮ
+    // ============================================================================
+    const SlideRenderer = ({ slide, isPreview = false }) => {
+      const [selectedAnswer, setSelectedAnswer] = useState(null);
+
+      useEffect(() => {
+        setSelectedAnswer(null);
+      }, [slide?.id]);
+
+      if (!slide) return null;
+
+      const containerClasses = `relative w-full h-full bg-[#0b1120] text-white overflow-hidden flex flex-col justify-between select-none ${
+        isPreview ? 'p-6 text-sm' : 'p-8 md:p-14 lg:p-16'
+      }`;
+
+      return (
+        <div className={containerClasses}>
+          <div className="pointer-events-none absolute -top-32 -right-32 w-96 h-96 rounded-full bg-[#00d2ff]/10 blur-[110px]" />
+          <div className="pointer-events-none absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-sky-600/10 blur-[110px]" />
+
+          {slide.type === 'title' && (
+            <div className="relative z-10 my-auto flex flex-col items-start max-w-4xl">
+              <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-[#00d2ff]/15 border border-[#00d2ff]/40 text-[#00d2ff] font-bold tracking-wider uppercase text-xs md:text-sm mb-6">
+                <UnifiedIcon name={slide.icon || 'Cpu'} size={18} className="p-1 border-0 bg-transparent shadow-none" />
+                <span>{slide.badge || 'ICT'}</span>
+              </div>
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.12] whitespace-pre-line text-white mb-6">
+                {slide.title}
+              </h1>
+              <p className="text-lg sm:text-2xl text-slate-300 font-normal max-w-3xl leading-relaxed border-l-4 border-[#00d2ff] pl-5">
+                {slide.subtitle}
+              </p>
+            </div>
+          )}
+
+          {slide.type === 'section' && (
+            <div className="relative z-10 my-auto flex flex-col items-center text-center max-w-4xl mx-auto">
+              <UnifiedIcon name={slide.icon || 'Cpu'} size={56} className="mb-6 p-5 rounded-2xl" />
+              <span className="text-[#00d2ff] font-extrabold tracking-[0.2em] uppercase text-sm md:text-base mb-3">
+                {slide.badge || 'SEKCE'}
+              </span>
+              <h2 className="text-4xl sm:text-6xl font-extrabold text-white mb-6">
+                {slide.title}
+              </h2>
+              <p className="text-lg sm:text-2xl text-slate-300 max-w-2xl leading-relaxed">
+                {slide.subtitle}
+              </p>
+            </div>
+          )}
+
+          {slide.type === 'cards-3' && (
+            <div className="relative z-10 flex flex-col h-full justify-between gap-4">
+              <div>
+                <div className="text-[#00d2ff] font-bold tracking-widest uppercase text-xs sm:text-sm mb-1">
+                  {slide.badge}
+                </div>
+                <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
+                  {slide.title}
+                </h2>
+              </div>
+
+              {slide.analogy && (
+                <div className="flex items-center gap-4 bg-slate-900/90 border border-[#00d2ff]/30 rounded-2xl p-4 sm:p-5 shadow-lg">
+                  <UnifiedIcon name="Sparkles" size={26} className="shrink-0" />
+                  <p className="text-slate-200 text-sm sm:text-lg font-medium leading-snug">
+                    {slide.analogy}
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 my-auto">
+                {(slide.cards || []).map((card, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-slate-900/75 border border-slate-800 hover:border-[#00d2ff]/50 rounded-2xl p-5 sm:p-6 flex flex-col justify-between transition-all shadow-xl"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-3 mb-4">
+                        <UnifiedIcon name={card.icon || 'Cpu'} size={28} />
+                        {card.highlight && (
+                          <span className="px-3 py-1 rounded-lg bg-[#00d2ff]/10 text-[#00d2ff] font-extrabold text-sm sm:text-base border border-[#00d2ff]/20">
+                            {card.highlight}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-lg sm:text-2xl font-bold text-white mb-2">
+                        {card.title}
+                      </h3>
+                      <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+                        {card.text}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {slide.type === 'comparison' && (
+            <div className="relative z-10 flex flex-col h-full justify-between gap-4">
+              <div>
+                <div className="text-[#00d2ff] font-bold tracking-widest uppercase text-xs sm:text-sm mb-1">
+                  {slide.badge}
+                </div>
+                <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white">
+                  {slide.title}
+                </h2>
+              </div>
+
+              {slide.analogy && (
+                <div className="flex items-center gap-3 bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-3">
+                  <UnifiedIcon name="Info" size={20} className="shrink-0 p-1.5" />
+                  <p className="text-slate-300 text-sm sm:text-base">{slide.analogy}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-auto">
+                {[slide.left, slide.right].map((col, idx) => col && (
+                  <div
+                    key={idx}
+                    className={`rounded-2xl p-6 sm:p-7 border flex flex-col justify-between ${
+                      idx === 0
+                        ? 'bg-slate-900/80 border-slate-800'
+                        : 'bg-gradient-to-br from-slate-900/90 to-[#00d2ff]/10 border-[#00d2ff]/40'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-4 mb-4">
+                        <UnifiedIcon name={col.icon || 'Box'} size={30} />
+                        <div>
+                          <h3 className="text-xl sm:text-2xl font-extrabold text-white">{col.title}</h3>
+                          <p className="text-[#00d2ff] text-xs sm:text-sm font-semibold">{col.subtitle}</p>
+                        </div>
+                      </div>
+                      <ul className="space-y-3 mt-4">
+                        {(col.points || []).map((pt, i) => (
+                          <li key={i} className="flex items-start gap-3 text-slate-200 text-sm sm:text-base leading-relaxed">
+                            <span className="w-2 h-2 rounded-full bg-[#00d2ff] mt-2 shrink-0" />
+                            <span>{pt}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {slide.type === 'split-image' && (
+            <div className="relative z-10 flex flex-col h-full justify-between gap-4">
+              <div>
+                <div className="text-[#00d2ff] font-bold tracking-widest uppercase text-xs sm:text-sm mb-1">
+                  {slide.badge}
+                </div>
+                <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white">
+                  {slide.title}
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center my-auto">
+                <div className="lg:col-span-6 space-y-4">
+                  {(slide.points || []).map((pt, idx) => (
+                    <div key={idx} className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex items-start gap-4">
+                      <UnifiedIcon name={pt.icon || 'Cpu'} size={24} className="shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-base sm:text-xl font-bold text-white mb-1">{pt.title}</h4>
+                        <p className="text-slate-300 text-sm sm:text-base leading-relaxed">{pt.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="lg:col-span-6 flex flex-col items-center">
+                  <div className="w-full rounded-2xl overflow-hidden border-2 border-slate-800 bg-slate-950 shadow-2xl flex items-center justify-center max-h-[340px]">
+                    {slide.imageUrl ? (
+                      <img
+                        src={slide.imageUrl}
+                        alt={slide.title}
+                        className="w-full h-full max-h-[330px] object-contain"
+                      />
+                    ) : (
+                      <div className="p-12 text-slate-500 flex flex-col items-center">
+                        <ImageIcon size={48} className="mb-2 text-slate-600" />
+                        <span>Zde se zobrazí vložený obrázek</span>
+                      </div>
+                    )}
+                  </div>
+                  {slide.imageCaption && (
+                    <span className="text-xs sm:text-sm text-slate-400 mt-2 italic">
+                      {slide.imageCaption}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {slide.type === 'big-stat' && (
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div>
+                <div className="text-[#00d2ff] font-bold tracking-widest uppercase text-xs sm:text-sm mb-1">
+                  {slide.badge}
+                </div>
+                <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white">
+                  {slide.title}
+                </h2>
+              </div>
+
+              <div className="my-auto text-center py-8 px-6 rounded-3xl bg-slate-900/80 border border-[#00d2ff]/30 shadow-[0_0_50px_rgba(0,210,255,0.1)]">
+                <div className="text-4xl sm:text-7xl lg:text-8xl font-black text-[#00d2ff] tracking-tight mb-4">
+                  {slide.stat}
+                </div>
+                <div className="text-xl sm:text-3xl font-bold text-white mb-6">
+                  {slide.statLabel}
+                </div>
+                <p className="text-base sm:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
+                  {slide.description}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {slide.type === 'steps-4' && (
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div>
+                <div className="text-[#00d2ff] font-bold tracking-widest uppercase text-xs sm:text-sm mb-1">
+                  {slide.badge}
+                </div>
+                <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white">
+                  {slide.title}
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 my-auto">
+                {(slide.steps || []).map((st, idx) => (
+                  <div
+                    key={idx}
+                    className="relative bg-slate-900/85 border border-slate-800 rounded-2xl p-5 sm:p-6 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-xs font-black tracking-widest uppercase px-2.5 py-1 rounded bg-[#00d2ff]/15 text-[#00d2ff]">
+                          {st.step || `KROK ${idx + 1}`}
+                        </span>
+                        <UnifiedIcon name={st.icon || 'Zap'} size={24} />
+                      </div>
+                      <h3 className="text-lg sm:text-xl font-bold text-white mb-2">
+                        {st.title}
+                      </h3>
+                      <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+                        {st.text}
+                      </p>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
+                      <span>Fáze {idx + 1} ze 4</span>
+                      {idx < 3 && <ChevronRight size={16} className="text-[#00d2ff]" />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {slide.type === 'summary' && (
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div>
+                <div className="text-[#00d2ff] font-bold tracking-widest uppercase text-xs sm:text-sm mb-1">
+                  {slide.badge}
+                </div>
+                <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white">
+                  {slide.title}
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 my-auto">
+                {(slide.boxes || []).map((box, idx) => (
+                  <div key={idx} className="bg-slate-900/85 border border-slate-800 rounded-2xl p-6 flex flex-col">
+                    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-800">
+                      <UnifiedIcon name={box.icon || 'CheckCircle'} size={26} />
+                      <h3 className="text-lg sm:text-xl font-bold text-white">{box.title}</h3>
+                    </div>
+                    <ul className="space-y-3">
+                      {(box.items || []).map((item, i) => (
+                        <li key={i} className="flex items-start gap-2.5 text-slate-200 text-sm sm:text-base leading-relaxed">
+                          <Check size={18} className="text-[#00d2ff] shrink-0 mt-1" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {slide.type === 'kahoot' && (
+            <div className="relative z-10 my-auto flex flex-col items-center text-center max-w-4xl mx-auto w-full">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#00d2ff]/15 text-[#00d2ff] font-bold text-sm mb-4 border border-[#00d2ff]/30">
+                <Gamepad2 size={18} />
+                <span>INTERAKTIVNÍ OVĚŘENÍ ZNALOSTÍ</span>
+              </div>
+              <h2 className="text-4xl sm:text-6xl font-black text-white tracking-tight mb-2">
+                {slide.title || 'KAHOOT!'}
+              </h2>
+              <p className="text-slate-300 text-base sm:text-xl mb-8">
+                {slide.subtitle || 'Čas na ověření znalostí'}
+              </p>
+
+              {slide.question && (
+                <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-6 text-left shadow-2xl">
+                  <div className="text-xs font-bold uppercase tracking-wider text-[#00d2ff] mb-2">
+                    Rychlá kontrolní otázka pro třídu (klikněte pro odhalení správné odpovědi):
+                  </div>
+                  <h3 className="text-lg sm:text-2xl font-bold text-white mb-5">
+                    {slide.question}
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {(slide.options || []).map((opt, idx) => {
+                      const isSelected = selectedAnswer === idx;
+                      const isCorrect = Number(slide.correctIndex) === idx;
+                      const showResult = selectedAnswer !== null;
+
+                      let btnStyle = 'bg-slate-800/80 border-slate-700 hover:border-[#00d2ff] text-slate-200';
+                      if (showResult) {
+                        if (isCorrect) {
+                          btnStyle = 'bg-emerald-500/20 border-emerald-400 text-emerald-200 font-bold';
+                        } else if (isSelected && !isCorrect) {
+                          btnStyle = 'bg-rose-500/20 border-rose-400 text-rose-200';
+                        } else {
+                          btnStyle = 'bg-slate-900/40 border-slate-800 text-slate-500';
+                        }
+                      }
+
+                      return (
+                        <button
+                          key={idx}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedAnswer(idx);
+                          }}
+                          className={`p-4 rounded-xl border text-left transition-all flex items-center justify-between gap-3 ${btnStyle}`}
+                        >
+                          <span className="text-sm sm:text-base">{opt}</span>
+                          {showResult && isCorrect && <CheckCircle size={20} className="text-emerald-400 shrink-0" />}
+                          {showResult && isSelected && !isCorrect && <XCircle size={20} className="text-rose-400 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ============================================================================
+    // 4. HLAVNÍ APLIKACE
+    // ============================================================================
+    function App() {
+      const [presentations, setPresentations] = useState(() => {
+        try {
+          const saved = localStorage.getItem('ict_portal_presentations_v1');
+          return saved ? JSON.parse(saved) : INITIAL_PRESENTATIONS;
+        } catch (e) {
+          return INITIAL_PRESENTATIONS;
+        }
+      });
+
+      const [resources, setResources] = useState(() => {
+        try {
+          const saved = localStorage.getItem('ict_portal_resources_v1');
+          return saved ? JSON.parse(saved) : INITIAL_RESOURCES;
+        } catch (e) {
+          return INITIAL_RESOURCES;
+        }
+      });
+
+      useEffect(() => {
+        try {
+          localStorage.setItem('ict_portal_presentations_v1', JSON.stringify(presentations));
+        } catch (e) {}
+      }, [presentations]);
+
+      useEffect(() => {
+        try {
+          localStorage.setItem('ict_portal_resources_v1', JSON.stringify(resources));
+        } catch (e) {}
+      }, [resources]);
+
+      const [view, setView] = useState('dashboard');
+      const [activeDeckId, setActiveDeckId] = useState(INITIAL_PRESENTATIONS[0].id);
+      const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+
+      const [searchQuery, setSearchQuery] = useState('');
+      const [selectedCategory, setSelectedCategory] = useState('Vše');
+
+      const [laserActive, setLaserActive] = useState(false);
+      const [laserPos, setLaserPos] = useState({ x: 0, y: 0 });
+      const [showSlideDrawer, setShowSlideDrawer] = useState(false);
+      const playerContainerRef = useRef(null);
+
+      const [iconPickerTarget, setIconPickerTarget] = useState(null);
+      const [notification, setNotification] = useState(null);
+
+      const [aiTopic, setAiTopic] = useState('Počítačové sítě: IP adresa, Router, Switch a Wi-Fi');
+      const [jsonInput, setJsonInput] = useState('');
+
+      const showToast = (msg) => {
+        setNotification(msg);
+        setTimeout(() => setNotification(null), 3500);
+      };
+
+      const activeDeck = presentations.find((p) => p.id === activeDeckId) || presentations[0];
+      const activeSlide = activeDeck?.slides[currentSlideIndex] || activeDeck?.slides[0];
+
+      useEffect(() => {
+        if (view !== 'present') return;
+        const handleKeyDown = (e) => {
+          if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+            e.preventDefault();
+            setCurrentSlideIndex((prev) => Math.min(prev + 1, (activeDeck?.slides.length || 1) - 1));
+          } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+            e.preventDefault();
+            setCurrentSlideIndex((prev) => Math.max(prev - 1, 0));
+          } else if (e.key === 'Escape') {
+            if (document.fullscreenElement) {
+              document.exitFullscreen().catch(() => {});
+            } else {
+              setView('dashboard');
+            }
+          } else if (e.key === 'f' || e.key === 'F') {
+            toggleFullscreen();
+          } else if (e.key === 'l' || e.key === 'L') {
+            setLaserActive((prev) => !prev);
+          }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [view, activeDeck]);
+
+      const toggleFullscreen = () => {
+        if (!playerContainerRef.current) return;
+        if (!document.fullscreenElement) {
+          playerContainerRef.current.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      };
+
+      const startPresentation = (deckId, slideIdx = 0) => {
+        setActiveDeckId(deckId);
+        setCurrentSlideIndex(slideIdx);
+        setView('present');
+      };
+
+      const openEditor = (deckId) => {
+        setActiveDeckId(deckId);
+        setCurrentSlideIndex(0);
+        setView('editor');
+      };
+
+      const updateActiveDeck = (updater) => {
+        setPresentations((prev) =>
+          prev.map((deck) => (deck.id === activeDeck.id ? updater(deck) : deck))
+        );
+      };
+
+      const updateActiveSlide = (newSlideData) => {
+        updateActiveDeck((deck) => {
+          const updatedSlides = [...deck.slides];
+          updatedSlides[currentSlideIndex] = {
+            ...updatedSlides[currentSlideIndex],
+            ...newSlideData
+          };
+          return { ...deck, updatedAt: new Date().toISOString().slice(0, 10), slides: updatedSlides };
+        });
+      };
+
+      const addSlideWithTemplate = (templateType) => {
+        const newId = 'slide-' + Date.now();
+        const templates = {
+          'title': {
+            id: newId,
+            type: 'title',
+            badge: 'ICT',
+            icon: 'Cpu',
+            title: 'Název nové kapitoly',
+            subtitle: 'Podnadpis vysvětlující hlavní myšlenku této hodiny.'
+          },
+          'section': {
+            id: newId,
+            type: 'section',
+            badge: 'KOMPONENTA 01',
+            icon: 'Layers',
+            title: 'Název sekce',
+            subtitle: 'Stručný popis toho, co v této části probereme.'
+          },
+          'cards-3': {
+            id: newId,
+            type: 'cards-3',
+            badge: 'HLAVNÍ PRINCIP',
+            title: 'Tři klíčové vlastnosti',
+            analogy: 'Přirovnání: Vysvětlete pojem pomocí jednoduchého příkladu z běžného života.',
+            cards: [
+              { icon: 'Cpu', highlight: 'Parametr 1', title: 'První bod', text: 'Stručné a jasné vysvětlení prvního pojmu pro studenty.' },
+              { icon: 'Zap', highlight: 'Parametr 2', title: 'Druhý bod', text: 'Stručné a jasné vysvětlení druhého pojmu pro studenty.' },
+              { icon: 'Shield', highlight: 'Parametr 3', title: 'Třetí bod', text: 'Stručné a jasné vysvětlení třetího pojmu pro studenty.' }
+            ]
+          },
+          'comparison': {
+            id: newId,
+            type: 'comparison',
+            badge: 'POROVNÁNÍ',
+            title: 'Možnost A vs. Možnost B',
+            analogy: 'Stručné shrnutí hlavního rozdílu mezi oběma přístupy.',
+            left: {
+              icon: 'Box',
+              title: 'První varianta',
+              subtitle: 'Kdy ji použít',
+              points: ['První výhoda nebo vlastnost.', 'Druhá vlastnost.', 'Třetí vlastnost.']
+            },
+            right: {
+              icon: 'Sparkles',
+              title: 'Druhá varianta',
+              subtitle: 'Moderní řešení',
+              points: ['Hlavní výhoda druhého řešení.', 'Vyšší rychlost nebo bezpečnost.', 'Praktický příklad využití.']
+            }
+          },
+          'split-image': {
+            id: newId,
+            type: 'split-image',
+            badge: 'VIZUÁLNÍ UKÁZKA',
+            title: 'Schéma zapojení a vysvětlení',
+            imageUrl: PRESET_IMAGES[1].url,
+            imageCaption: 'Popisek obrázku nebo schématu',
+            points: [
+              { icon: 'Cpu', title: 'První důležitá část', text: 'Popis toho, co studenti vidí na obrázku vpravo.' },
+              { icon: 'Zap', title: 'Druhá důležitá část', text: 'Navazující vysvětlení principu fungování.' }
+            ]
+          },
+          'big-stat': {
+            id: newId,
+            type: 'big-stat',
+            badge: 'ZAJÍMAVÉ ČÍSLO',
+            title: 'Jak rychlá je moderní technologie?',
+            stat: '100 %',
+            statLabel: 'podíl superpočítačů běžících na Linuxu',
+            description: 'Doplňující kontext, který studentům pomůže si toto obrovské číslo představit v praxi.'
+          },
+          'steps-4': {
+            id: newId,
+            type: 'steps-4',
+            badge: 'KROK ZA KROKEM',
+            title: 'Jak probíhá celý proces?',
+            steps: [
+              { step: 'KROK 1', icon: 'Mouse', title: 'Začátek', text: 'Co se stane jako úplně první.' },
+              { step: 'KROK 2', icon: 'Cpu', title: 'Zpracování', text: 'Jak na to zareaguje procesor nebo systém.' },
+              { step: 'KROK 3', icon: 'HardDrive', title: 'Přenos dat', text: 'Kudy data putují dál.' },
+              { step: 'KROK 4', icon: 'Monitor', title: 'Výsledek', text: 'Co uvidí uživatel na obrazovce.' }
+            ]
+          },
+          'summary': {
+            id: newId,
+            type: 'summary',
+            badge: 'ZÁVĚREČNÉ SHRNUTÍ',
+            title: 'Co si odnést z dnešní hodiny?',
+            boxes: [
+              { icon: 'Cpu', title: 'První oblast', items: ['Klíčový poznatek 1', 'Klíčový poznatek 2'] },
+              { icon: 'Layers', title: 'Druhá oblast', items: ['Klíčový poznatek 1', 'Klíčový poznatek 2'] },
+              { icon: 'CheckCircle', title: 'Třetí oblast', items: ['Klíčový poznatek 1', 'Klíčový poznatek 2'] }
+            ]
+          },
+          'kahoot': {
+            id: newId,
+            type: 'kahoot',
+            title: 'KAHOOT! Čas na ověření znalostí',
+            subtitle: 'Připravte si telefony nebo odpovězte společně na tabuli.',
+            question: 'Kontrolní otázka z dnešní látky?',
+            options: ['Správná odpověď', 'Chybná možnost B', 'Chybná možnost C', 'Chybná možnost D'],
+            correctIndex: 0
+          }
+        };
+
+        const newSlide = templates[templateType] || templates['cards-3'];
+        updateActiveDeck((deck) => {
+          const nextSlides = [...deck.slides];
+          nextSlides.splice(currentSlideIndex + 1, 0, newSlide);
+          return { ...deck, slides: nextSlides };
+        });
+        setCurrentSlideIndex((prev) => prev + 1);
+        showToast('Nový slajd byl přidán');
+      };
+
+      const deleteCurrentSlide = () => {
+        if (activeDeck.slides.length <= 1) {
+          showToast('Prezentace musí obsahovat alespoň 1 slajd');
+          return;
+        }
+        updateActiveDeck((deck) => {
+          const nextSlides = deck.slides.filter((_, idx) => idx !== currentSlideIndex);
+          return { ...deck, slides: nextSlides };
+        });
+        setCurrentSlideIndex((prev) => Math.max(0, prev - 1));
+        showToast('Slajd byl odstraněn');
+      };
+
+      const moveSlide = (direction) => {
+        const targetIdx = currentSlideIndex + direction;
+        if (targetIdx < 0 || targetIdx >= activeDeck.slides.length) return;
+        updateActiveDeck((deck) => {
+          const nextSlides = [...deck.slides];
+          const [moved] = nextSlides.splice(currentSlideIndex, 1);
+          nextSlides.splice(targetIdx, 0, moved);
+          return { ...deck, slides: nextSlides };
+        });
+        setCurrentSlideIndex(targetIdx);
+      };
+
+      const createNewPresentation = () => {
+        const newId = 'deck-' + Date.now();
+        const newDeck = {
+          id: newId,
+          title: 'Nová výuková prezentace',
+          subtitle: 'Popis tématu pro studenty střední školy.',
+          category: 'Hardware',
+          badge: 'ICT • Nové',
+          icon: 'Sparkles',
+          updatedAt: new Date().toISOString().slice(0, 10),
+          kahootUrl: 'https://create.kahoot.it/',
+          slides: [
+            {
+              id: 's-1',
+              type: 'title',
+              badge: 'ICT',
+              icon: 'Sparkles',
+              title: 'Nová výuková prezentace',
+              subtitle: 'Klikněte vpravo a upravte nadpis, přidejte karty, obrázky nebo přirovnání.'
+            },
+            {
+              id: 's-2',
+              type: 'cards-3',
+              badge: 'ÚVOD DO TÉMATU',
+              title: 'Hlavní body dnešní hodiny',
+              analogy: 'Přirovnání: Zde napište jednoduchou analogii ze života, kterou studenti ihned pochopí.',
+              cards: [
+                { icon: 'Cpu', highlight: 'Bod 1', title: 'První pojem', text: 'Vysvětlení prvního pojmu.' },
+                { icon: 'Zap', highlight: 'Bod 2', title: 'Druhý pojem', text: 'Vysvětlení druhého pojmu.' },
+                { icon: 'Shield', highlight: 'Bod 3', title: 'Třetí pojem', text: 'Vysvětlení třetího pojmu.' }
+              ]
+            }
+          ]
+        };
+        setPresentations((prev) => [newDeck, ...prev]);
+        setActiveDeckId(newId);
+        setCurrentSlideIndex(0);
+        setView('editor');
+        showToast('Vytvořena nová prezentace');
+      };
+
+      const duplicatePresentation = (deck) => {
+        const copy = {
+          ...JSON.parse(JSON.stringify(deck)),
+          id: 'deck-' + Date.now(),
+          title: `${deck.title} (Kopie)`,
+          updatedAt: new Date().toISOString().slice(0, 10)
+        };
+        setPresentations((prev) => [copy, ...prev]);
+        showToast('Prezentace byla zduplikována');
+      };
+
+      const deletePresentation = (deckId) => {
+        if (presentations.length <= 1) {
+          showToast('Nelze smazat poslední prezentaci');
+          return;
+        }
+        setPresentations((prev) => prev.filter((p) => p.id !== deckId));
+        if (activeDeckId === deckId) {
+          setActiveDeckId(presentations[0].id);
+        }
+        showToast('Prezentace byla smazána');
+      };
+
+      const handleImageUpload = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          updateActiveSlide({ imageUrl: event.target.result });
+          showToast('Obrázek byl vložen do slajdu');
+        };
+        reader.readAsDataURL(file);
+      };
+
+      const exportAllData = () => {
+        const dataStr = JSON.stringify({ presentations, resources }, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ict-prezentace-data-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Data byla vyexportována do souboru .json');
+      };
+
+      const importAllData = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const parsed = JSON.parse(event.target.result);
+            if (parsed.presentations && Array.isArray(parsed.presentations)) {
+              setPresentations(parsed.presentations);
+              if (parsed.resources) setResources(parsed.resources);
+              showToast('Všechny prezentace byly úspěšně nahrány!');
+            } else if (parsed.slides && Array.isArray(parsed.slides)) {
+              setPresentations((prev) => [parsed, ...prev]);
+              showToast(`Prezentace "${parsed.title}" byla přidána!`);
+            }
+          } catch (err) {
+            showToast('Chyba: Soubor nemá platný JSON formát');
+          }
+        };
+        reader.readAsText(file);
+      };
+
+      const resetToDefaults = () => {
+        setPresentations(INITIAL_PRESENTATIONS);
+        setResources(INITIAL_RESOURCES);
+        localStorage.removeItem('ict_portal_presentations_v1');
+        localStorage.removeItem('ict_portal_resources_v1');
+        showToast('Obnoveny původní 4 prezentace');
+      };
+
+      const categories = ['Vše', 'Hardware', 'Operační systémy', 'Sítě', 'Programování'];
+      const filteredPresentations = presentations.filter((p) => {
+        const matchesCategory = selectedCategory === 'Vše' || p.category === selectedCategory;
+        const matchesSearch =
+          p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.subtitle.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+      });
+
+      if (view === 'present' && activeDeck) {
+        const totalSlides = activeDeck.slides.length;
+        const progressPercent = ((currentSlideIndex + 1) / totalSlides) * 100;
+
+        return (
+          <div
+            ref={playerContainerRef}
+            onMouseMove={(e) => {
+              if (laserActive) {
+                setLaserPos({ x: e.clientX, y: e.clientY });
+              }
+            }}
+            className={`fixed inset-0 bg-[#060a12] text-white flex flex-col justify-between z-50 select-none ${
+              laserActive ? 'cursor-none' : ''
+            }`}
+          >
+            {laserActive && (
+              <div
+                style={{ left: laserPos.x, top: laserPos.y }}
+                className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-rose-500 shadow-[0_0_20px_8px_rgba(244,63,94,0.85)] border-2 border-white"
+              />
+            )}
+
+            <div className="flex items-center justify-between px-6 py-3 bg-slate-950/90 border-b border-slate-800/80 backdrop-blur-md z-20">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+                    setView('dashboard');
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium transition"
+                >
+                  <ChevronLeft size={18} />
+                  <span>Zpět na portál</span>
+                </button>
+                <span className="text-slate-600">|</span>
+                <span className="font-bold text-white text-sm sm:text-base truncate max-w-md">
+                  {activeDeck.title}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setLaserActive(!laserActive)}
+                  title="Laserové ukazovátko (Klávesa L)"
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border transition ${
+                    laserActive
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/50'
+                      : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <Pointer size={16} />
+                  <span className="hidden sm:inline">Ukazovátko (L)</span>
+                </button>
+
+                <button
+                  onClick={() => setShowSlideDrawer(!showSlideDrawer)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs sm:text-sm font-medium transition"
+                >
+                  <List size={16} />
+                  <span className="hidden sm:inline">Osnova ({currentSlideIndex + 1}/{totalSlides})</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+                    setView('editor');
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#00d2ff]/15 hover:bg-[#00d2ff]/25 text-[#00d2ff] border border-[#00d2ff]/30 text-xs sm:text-sm font-semibold transition"
+                >
+                  <Edit3 size={16} />
+                  <span className="hidden sm:inline">Upravit slajd</span>
+                </button>
+
+                <button
+                  onClick={toggleFullscreen}
+                  title="Celá obrazovka (Klávesa F)"
+                  className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition"
+                >
+                  <Maximize2 size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div
+              onClick={() => {
+                if (currentSlideIndex < totalSlides - 1) {
+                  setCurrentSlideIndex(currentSlideIndex + 1);
+                }
+              }}
+              className="relative flex-1 flex items-center justify-center p-2 sm:p-6 overflow-hidden"
+            >
+              <div className="w-full h-full max-w-[1600px] max-h-[900px] rounded-2xl overflow-hidden shadow-[0_0_70px_rgba(0,0,0,0.8)] border border-slate-800/80">
+                <SlideRenderer slide={activeSlide} />
+              </div>
+
+              {showSlideDrawer && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-4 top-4 bottom-4 w-80 bg-slate-950/95 border border-slate-800 rounded-2xl p-4 overflow-y-auto z-30 shadow-2xl backdrop-blur-xl"
+                >
+                  <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+                    <h4 className="font-bold text-white text-sm">Přehled slajdů ({totalSlides})</h4>
+                    <button onClick={() => setShowSlideDrawer(false)} className="text-slate-400 hover:text-white">
+                      <X size={18} />
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {activeDeck.slides.map((s, idx) => (
+                      <button
+                        key={s.id || idx}
+                        onClick={() => {
+                          setCurrentSlideIndex(idx);
+                          setShowSlideDrawer(false);
+                        }}
+                        className={`w-full text-left p-3 rounded-xl border transition flex items-start gap-3 ${
+                          idx === currentSlideIndex
+                            ? 'bg-[#00d2ff]/15 border-[#00d2ff] text-white'
+                            : 'bg-slate-900/70 border-slate-800/80 text-slate-300 hover:bg-slate-900'
+                        }`}
+                      >
+                        <span className="text-xs font-mono font-bold text-[#00d2ff] mt-0.5">
+                          {String(idx + 1).padStart(2, '0')}
+                        </span>
+                        <div className="truncate">
+                          <div className="font-semibold text-sm truncate">{s.title}</div>
+                          <div className="text-xs text-slate-500 uppercase">{s.badge || s.type}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-slate-950/90 border-t border-slate-800/80 px-6 py-3 flex items-center justify-between z-20">
+              <div className="text-xs sm:text-sm text-slate-400 font-medium">
+                Slajd <strong className="text-white">{currentSlideIndex + 1}</strong> z <strong className="text-white">{totalSlides}</strong>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  disabled={currentSlideIndex === 0}
+                  onClick={() => setCurrentSlideIndex((prev) => Math.max(0, prev - 1))}
+                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white font-semibold text-sm flex items-center gap-2 border border-slate-800 transition"
+                >
+                  <ChevronLeft size={18} />
+                  <span>Předchozí</span>
+                </button>
+                <button
+                  disabled={currentSlideIndex === totalSlides - 1}
+                  onClick={() => setCurrentSlideIndex((prev) => Math.min(totalSlides - 1, prev + 1))}
+                  className="px-5 py-2 rounded-xl bg-[#00d2ff] hover:bg-[#38bdf8] disabled:opacity-40 text-slate-950 font-bold text-sm flex items-center gap-2 transition shadow-[0_0_20px_rgba(0,210,255,0.3)]"
+                >
+                  <span>Další slajd</span>
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+
+              <div className="hidden md:flex items-center gap-2 text-xs text-slate-500">
+                <span>Šipky ← →</span>
+                <span>•</span>
+                <span>F = Fullscreen</span>
+                <span>•</span>
+                <span>Esc = Konec</span>
+              </div>
+            </div>
+
+            <div className="h-1.5 w-full bg-slate-900">
+              <div
+                className="h-full bg-[#00d2ff] transition-all duration-300 shadow-[0_0_12px_#00d2ff]"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-[#0b1120] text-slate-100 flex flex-col font-sans">
+          {notification && (
+            <div className="fixed bottom-6 right-6 z-50 bg-[#00d2ff] text-slate-950 font-bold px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 animate-bounce">
+              <CheckCircle size={20} />
+              <span>{notification}</span>
+            </div>
+          )}
+
+          {iconPickerTarget && (
+            <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Vyberte sjednocenou ikonu</h3>
+                    <p className="text-xs text-slate-400">Všechny ikony automaticky dostanou jednotný azurový vzhled vaší prezentace</p>
+                  </div>
+                  <button onClick={() => setIconPickerTarget(null)} className="p-2 text-slate-400 hover:text-white">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto space-y-6 pr-2">
+                  {ICON_CATEGORIES.map((cat) => (
+                    <div key={cat.name}>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#00d2ff] mb-3">{cat.name}</h4>
+                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2.5">
+                        {cat.icons.map((iconName) => (
+                          <button
+                            key={iconName}
+                            onClick={() => {
+                              iconPickerTarget(iconName);
+                              setIconPickerTarget(null);
+                            }}
+                            className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-800/70 hover:bg-[#00d2ff]/20 border border-slate-700 hover:border-[#00d2ff] transition group"
+                            title={iconName}
+                          >
+                            <UnifiedIcon name={iconName} size={22} className="p-2 border-0 bg-transparent shadow-none" />
+                            <span className="text-[10px] text-slate-400 group-hover:text-white mt-1 truncate w-full text-center">
+                              {iconName}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <header className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-8 py-3.5">
+            <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+              <div
+                onClick={() => setView('dashboard')}
+                className="flex items-center gap-3.5 cursor-pointer group"
+              >
+                <div className="w-11 h-11 rounded-xl bg-[#00d2ff]/15 border border-[#00d2ff]/40 flex items-center justify-center text-[#00d2ff] shadow-[0_0_20px_rgba(0,210,255,0.2)] group-hover:scale-105 transition">
+                  <Cpu size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white">
+                      ICT Výukový Portál
+                    </span>
+                    <span className="text-[11px] font-bold uppercase px-2 py-0.5 rounded-md bg-[#00d2ff]/15 text-[#00d2ff] border border-[#00d2ff]/30">
+                      SŠ Studio
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Výukové materiály, prezentace a vizuální editor pro GitHub Pages
+                  </p>
+                </div>
+              </div>
+
+              <nav className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => setView('dashboard')}
+                  className={`px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition ${
+                    view === 'dashboard'
+                      ? 'bg-[#00d2ff] text-slate-950 shadow-[0_0_20px_rgba(0,210,255,0.3)]'
+                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                  }`}
+                >
+                  <BookOpen size={16} />
+                  <span>Katalog prezentací</span>
+                </button>
+
+                <button
+                  onClick={() => setView('editor')}
+                  className={`px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition ${
+                    view === 'editor'
+                      ? 'bg-[#00d2ff] text-slate-950 shadow-[0_0_20px_rgba(0,210,255,0.3)]'
+                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                  }`}
+                >
+                  <Edit3 size={16} />
+                  <span>Editor slajdů</span>
+                </button>
+
+                <button
+                  onClick={() => setView('ai-generator')}
+                  className={`px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition ${
+                    view === 'ai-generator'
+                      ? 'bg-[#00d2ff] text-slate-950 shadow-[0_0_20px_rgba(0,210,255,0.3)]'
+                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                  }`}
+                >
+                  <Sparkles size={16} />
+                  <span>AI Generátor</span>
+                </button>
+
+                <button
+                  onClick={() => setView('github-guide')}
+                  className={`px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition ${
+                    view === 'github-guide'
+                      ? 'bg-[#00d2ff] text-slate-950 shadow-[0_0_20px_rgba(0,210,255,0.3)]'
+                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                  }`}
+                >
+                  <Github size={16} />
+                  <span>GitHub & Záloha</span>
+                </button>
+              </nav>
+            </div>
+          </header>
+
+          {view === 'dashboard' && (
+            <main className="max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 flex-1 space-y-10">
+              <div className="relative rounded-3xl bg-gradient-to-r from-slate-900 via-[#0f172a] to-slate-900 border border-slate-800 p-6 sm:p-10 overflow-hidden shadow-2xl">
+                <div className="pointer-events-none absolute -right-20 -top-20 w-80 h-80 rounded-full bg-[#00d2ff]/15 blur-3xl" />
+                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                  <div className="max-w-2xl">
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00d2ff]/15 text-[#00d2ff] text-xs font-bold uppercase tracking-wider mb-3">
+                      <Sparkles size={14} /> Jednotný design & sjednocené ikony
+                    </span>
+                    <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mb-3">
+                      Výukové prezentace a materiály pro SŠ
+                    </h1>
+                    <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+                      Všechny vaše prezentace v jednotném tmavém stylu s azurovými ikonami. Můžete je rovnou promítat na tabuli v režimu 16:9, upravovat texty, měnit ikonky jedním kliknutím nebo vkládat vlastní obrázky.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap sm:flex-nowrap gap-3 shrink-0">
+                    <button
+                      onClick={createNewPresentation}
+                      className="px-5 py-3 rounded-xl bg-[#00d2ff] hover:bg-[#38bdf8] text-slate-950 font-extrabold text-sm flex items-center gap-2 shadow-[0_0_25px_rgba(0,210,255,0.3)] transition"
+                    >
+                      <Plus size={18} />
+                      <span>Nová prezentace</span>
+                    </button>
+                    <button
+                      onClick={() => setView('ai-generator')}
+                      className="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm flex items-center gap-2 border border-slate-700 transition"
+                    >
+                      <Sparkles size={18} className="text-[#00d2ff]" />
+                      <span>Vygenerovat přes AI</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition ${
+                        selectedCategory === cat
+                          ? 'bg-[#00d2ff]/20 text-[#00d2ff] border border-[#00d2ff]/50'
+                          : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative w-full sm:w-72">
+                  <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Hledat prezentaci (např. RAM, Linux)..."
+                    className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#00d2ff]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredPresentations.map((deck) => (
+                  <div
+                    key={deck.id}
+                    className="group bg-slate-900/75 hover:bg-slate-900 border border-slate-800 hover:border-[#00d2ff]/50 rounded-2xl p-6 flex flex-col justify-between transition-all shadow-xl"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                        <div className="flex items-center gap-3">
+                          <UnifiedIcon name={deck.icon || 'Cpu'} size={28} />
+                          <div>
+                            <span className="text-xs font-bold uppercase tracking-wider text-[#00d2ff]">
+                              {deck.category} • {deck.slides.length} slajdů
+                            </span>
+                            <h3 className="text-xl font-extrabold text-white group-hover:text-[#00d2ff] transition">
+                              {deck.title}
+                            </h3>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => duplicatePresentation(deck)}
+                            title="Duplikovat prezentaci"
+                            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                          >
+                            <Copy size={16} />
+                          </button>
+                          <button
+                            onClick={() => deletePresentation(deck.id)}
+                            title="Smazat prezentaci"
+                            className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className="text-slate-300 text-sm leading-relaxed mb-5">
+                        {deck.subtitle}
+                      </p>
+
+                      <div className="flex flex-wrap gap-1.5 mb-6">
+                        {deck.slides.slice(1, 6).map((s, idx) => (
+                          <span
+                            key={idx}
+                            onClick={() => startPresentation(deck.id, idx + 1)}
+                            className="text-xs px-2.5 py-1 rounded-md bg-slate-950/90 text-slate-300 border border-slate-800 hover:border-[#00d2ff]/40 cursor-pointer transition truncate max-w-[200px]"
+                          >
+                            {idx + 2}. {s.title}
+                          </span>
+                        ))}
+                        {deck.slides.length > 6 && (
+                          <span className="text-xs px-2.5 py-1 rounded-md bg-slate-950/50 text-slate-500">
+                            +{deck.slides.length - 6} dalších
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between gap-3">
+                      <button
+                        onClick={() => startPresentation(deck.id, 0)}
+                        className="flex-1 py-2.5 px-4 rounded-xl bg-[#00d2ff] hover:bg-[#38bdf8] text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 transition shadow-[0_0_20px_rgba(0,210,255,0.2)]"
+                      >
+                        <Play size={16} fill="currentColor" />
+                        <span>Spustit prezentaci</span>
+                      </button>
+
+                      <button
+                        onClick={() => openEditor(deck.id)}
+                        className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm flex items-center gap-2 border border-slate-700 transition"
+                      >
+                        <Edit3 size={16} />
+                        <span>Upravit</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-6 border-t border-slate-800">
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-white">
+                      Doplňkové materiály, taháky a cvičení do hodin
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-400">
+                      Rychlé podklady a aktivity navazující na prezentace
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  {resources.map((res) => (
+                    <div
+                      key={res.id}
+                      className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between text-xs font-bold text-[#00d2ff] uppercase mb-2">
+                          <span>{res.category}</span>
+                          <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300">{res.type}</span>
+                        </div>
+                        <h4 className="font-bold text-white text-base mb-2">{res.title}</h4>
+                        <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">{res.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </main>
+          )}
+
+          {view === 'editor' && activeDeck && (
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+              <aside className="w-full lg:w-72 bg-slate-950 border-b lg:border-b-0 lg:border-r border-slate-800 p-4 flex flex-col justify-between overflow-y-auto max-h-[35vh] lg:max-h-[calc(100vh-65px)]">
+                <div>
+                  <div className="mb-4">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                      Upravovaná prezentace:
+                    </label>
+                    <select
+                      value={activeDeck.id}
+                      onChange={(e) => {
+                        setActiveDeckId(e.target.value);
+                        setCurrentSlideIndex(0);
+                      }}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-[#00d2ff]"
+                    >
+                      {presentations.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[#00d2ff] mb-1.5">
+                      + Přidat nový slajd (Šablona):
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        { type: 'cards-3', label: '3 Karty + Analogie' },
+                        { type: 'comparison', label: '2 Sloupce (Vs.)' },
+                        { type: 'split-image', label: 'Text + Obrázek' },
+                        { type: 'steps-4', label: '4 Kroky procesu' },
+                        { type: 'big-stat', label: 'Velké číslo' },
+                        { type: 'summary', label: 'Tahák / Shrnutí' },
+                        { type: 'section', label: 'Sekční předěl' },
+                        { type: 'kahoot', label: 'Kahoot / Kvíz' }
+                      ].map((tpl) => (
+                        <button
+                          key={tpl.type}
+                          onClick={() => addSlideWithTemplate(tpl.type)}
+                          className="text-left px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-[#00d2ff]/15 text-slate-300 hover:text-[#00d2ff] border border-slate-800 hover:border-[#00d2ff]/40 text-xs font-medium transition"
+                        >
+                          + {tpl.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                      Slajdy v prezentaci ({activeDeck.slides.length}):
+                    </div>
+                    {activeDeck.slides.map((s, idx) => (
+                      <div
+                        key={s.id || idx}
+                        onClick={() => setCurrentSlideIndex(idx)}
+                        className={`group p-2.5 rounded-xl border cursor-pointer transition flex items-center justify-between gap-2 ${
+                          idx === currentSlideIndex
+                            ? 'bg-[#00d2ff]/15 border-[#00d2ff] text-white'
+                            : 'bg-slate-900/60 border-slate-800/80 text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 truncate">
+                          <span className="text-xs font-mono font-bold text-[#00d2ff]">
+                            {String(idx + 1).padStart(2, '0')}
+                          </span>
+                          <div className="truncate">
+                            <div className="text-xs font-bold truncate text-white">{s.title}</div>
+                            <div className="text-[10px] text-slate-500 uppercase">{s.type}</div>
+                          </div>
+                        </div>
+
+                        {idx === currentSlideIndex && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); moveSlide(-1); }}
+                              className="p-1 hover:text-[#00d2ff]"
+                              title="Posunout výše"
+                            >
+                              <ArrowUp size={13} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); moveSlide(1); }}
+                              className="p-1 hover:text-[#00d2ff]"
+                              title="Posunout níže"
+                            >
+                              <ArrowDown size={13} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteCurrentSlide(); }}
+                              className="p-1 hover:text-rose-400"
+                              title="Smazat slajd"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </aside>
+
+              <div className="flex-1 bg-[#070b14] p-4 sm:p-6 flex flex-col justify-between overflow-y-auto">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <Eye size={15} className="text-[#00d2ff]" />
+                    <span>Živý náhled slajdu {currentSlideIndex + 1} / {activeDeck.slides.length}</span>
+                  </div>
+
+                  <button
+                    onClick={() => startPresentation(activeDeck.id, currentSlideIndex)}
+                    className="px-4 py-1.5 rounded-xl bg-[#00d2ff] hover:bg-[#38bdf8] text-slate-950 font-extrabold text-xs sm:text-sm flex items-center gap-2 shadow-lg transition"
+                  >
+                    <Play size={15} fill="currentColor" />
+                    <span>Promítat od tohoto slajdu</span>
+                  </button>
+                </div>
+
+                <div className="my-auto w-full aspect-video max-h-[68vh] mx-auto rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
+                  <SlideRenderer slide={activeSlide} isPreview={true} />
+                </div>
+
+                <div className="mt-3 text-center text-xs text-slate-500">
+                  Veškeré změny v pravém panelu se okamžitě propisují do náhledu a automaticky ukládají v prohlížeči.
+                </div>
+              </div>
+
+              <aside className="w-full lg:w-96 bg-slate-950 border-t lg:border-t-0 lg:border-l border-slate-800 p-5 overflow-y-auto max-h-[50vh] lg:max-h-[calc(100vh-65px)] space-y-5">
+                <div className="pb-3 border-b border-slate-800">
+                  <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                    <Edit3 size={18} className="text-[#00d2ff]" />
+                    <span>Úprava obsahu slajdu</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">Změňte texty, klikněte na ikonu pro výměnu nebo vložte obrázek</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Šablona rozvržení (Layout)</label>
+                  <select
+                    value={activeSlide.type}
+                    onChange={(e) => updateActiveSlide({ type: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white"
+                  >
+                    <option value="title">Titulní slajd</option>
+                    <option value="section">Sekční předěl (Komponenta 01)</option>
+                    <option value="cards-3">3 Karty s ikonami a analogií</option>
+                    <option value="comparison">Porovnání 2 sloupců (Vs.)</option>
+                    <option value="split-image">Text vlevo + Obrázek vpravo</option>
+                    <option value="big-stat">Velké číslo / Fakt uprostřed</option>
+                    <option value="steps-4">4 Kroky procesu</option>
+                    <option value="summary">Závěrečný tahák (3 boxy)</option>
+                    <option value="kahoot">Kahoot! / Kvízová otázka</option>
+                  </select>
+                </div>
+
+                {activeSlide.type !== 'kahoot' && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">Horní azurový štítek (Kategorie)</label>
+                    <input
+                      type="text"
+                      value={activeSlide.badge || ''}
+                      onChange={(e) => updateActiveSlide({ badge: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Hlavní nadpis slajdu</label>
+                  <textarea
+                    rows={2}
+                    value={activeSlide.title || ''}
+                    onChange={(e) => updateActiveSlide({ title: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white"
+                  />
+                </div>
+
+                {(activeSlide.type === 'title' || activeSlide.type === 'section' || activeSlide.type === 'kahoot') && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">Podnadpis / Popis</label>
+                    <textarea
+                      rows={2}
+                      value={activeSlide.subtitle || ''}
+                      onChange={(e) => updateActiveSlide({ subtitle: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                )}
+
+                {(activeSlide.type === 'title' || activeSlide.type === 'section') && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">Hlavní ikona slajdu</label>
+                    <button
+                      onClick={() =>
+                        setIconPickerTarget(() => (selectedIcon) => updateActiveSlide({ icon: selectedIcon }))
+                      }
+                      className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-[#00d2ff] text-sm text-white"
+                    >
+                      <UnifiedIcon name={activeSlide.icon || 'Cpu'} size={20} className="p-1.5" />
+                      <span>Změnit ikonu ({activeSlide.icon || 'Cpu'})</span>
+                    </button>
+                  </div>
+                )}
+
+                {(activeSlide.type === 'cards-3' || activeSlide.type === 'comparison') && (
+                  <div>
+                    <label className="block text-xs font-bold text-[#00d2ff] mb-1">
+                      Přirovnání / ELI5 Analogie (Horní box)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={activeSlide.analogy || ''}
+                      onChange={(e) => updateActiveSlide({ analogy: e.target.value })}
+                      placeholder="Např. Frekvence je jako cyklista na rotopedu..."
+                      className="w-full bg-slate-900 border border-[#00d2ff]/40 rounded-xl px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                )}
+
+                {activeSlide.type === 'cards-3' && (
+                  <div className="space-y-4 pt-2 border-t border-slate-800">
+                    <div className="text-xs font-bold uppercase text-[#00d2ff]">Jednotlivé karty (3 sloupce):</div>
+                    {(activeSlide.cards || []).map((card, idx) => (
+                      <div key={idx} className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-400">Karta #{idx + 1}</span>
+                          <button
+                            onClick={() =>
+                              setIconPickerTarget(() => (selectedIcon) => {
+                                const nextCards = [...activeSlide.cards];
+                                nextCards[idx] = { ...nextCards[idx], icon: selectedIcon };
+                                updateActiveSlide({ cards: nextCards });
+                              })
+                            }
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-[#00d2ff]/20 text-xs text-[#00d2ff] border border-slate-700"
+                          >
+                            <UnifiedIcon name={card.icon} size={14} className="p-1 border-0 bg-transparent shadow-none" />
+                            <span>Ikona: {card.icon}</span>
+                          </button>
+                        </div>
+
+                        <input
+                          type="text"
+                          value={card.highlight || ''}
+                          onChange={(e) => {
+                            const nextCards = [...activeSlide.cards];
+                            nextCards[idx] = { ...nextCards[idx], highlight: e.target.value };
+                            updateActiveSlide({ cards: nextCards });
+                          }}
+                          placeholder="Zvýrazněný parametr"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-[#00d2ff] font-bold"
+                        />
+
+                        <input
+                          type="text"
+                          value={card.title || ''}
+                          onChange={(e) => {
+                            const nextCards = [...activeSlide.cards];
+                            nextCards[idx] = { ...nextCards[idx], title: e.target.value };
+                            updateActiveSlide({ cards: nextCards });
+                          }}
+                          placeholder="Nadpis karty"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-bold"
+                        />
+
+                        <textarea
+                          rows={2}
+                          value={card.text || ''}
+                          onChange={(e) => {
+                            const nextCards = [...activeSlide.cards];
+                            nextCards[idx] = { ...nextCards[idx], text: e.target.value };
+                            updateActiveSlide({ cards: nextCards });
+                          }}
+                          placeholder="Popis karty"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {activeSlide.type === 'split-image' && (
+                  <div className="space-y-4 pt-2 border-t border-slate-800">
+                    <div className="text-xs font-bold uppercase text-[#00d2ff]">Obrázek na slajdu:</div>
+
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1.5">
+                        1. Nahrát vlastní obrázek z počítače:
+                      </label>
+                      <label className="w-full py-2.5 px-4 rounded-xl bg-[#00d2ff]/15 hover:bg-[#00d2ff]/25 text-[#00d2ff] border border-[#00d2ff]/40 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition">
+                        <Upload size={16} />
+                        <span>Vybrat soubor obrázku (PNG, JPG, SVG)</span>
+                        <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">2. Nebo vložit URL odkaz obrázku:</label>
+                      <input
+                        type="text"
+                        value={activeSlide.imageUrl?.startsWith('data:') ? '' : activeSlide.imageUrl || ''}
+                        onChange={(e) => updateActiveSlide({ imageUrl: e.target.value })}
+                        placeholder="https://..."
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">3. Nebo vybrat hotové IT schéma:</label>
+                      <div className="grid grid-cols-1 gap-1.5">
+                        {PRESET_IMAGES.map((img) => (
+                          <button
+                            key={img.id}
+                            onClick={() => updateActiveSlide({ imageUrl: img.url, imageCaption: img.name })}
+                            className="text-left px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 flex items-center gap-2"
+                          >
+                            <ImageIcon size={14} className="text-[#00d2ff]" />
+                            <span>{img.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Popisek pod obrázkem:</label>
+                      <input
+                        type="text"
+                        value={activeSlide.imageCaption || ''}
+                        onChange={(e) => updateActiveSlide({ imageCaption: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white"
+                      />
+                    </div>
+
+                    <div className="text-xs font-bold uppercase text-[#00d2ff] pt-2">Textové body vlevo:</div>
+                    {(activeSlide.points || []).map((pt, idx) => (
+                      <div key={idx} className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-slate-400">Bod #{idx + 1}</span>
+                          <button
+                            onClick={() =>
+                              setIconPickerTarget(() => (selectedIcon) => {
+                                const nextPts = [...activeSlide.points];
+                                nextPts[idx] = { ...nextPts[idx], icon: selectedIcon };
+                                updateActiveSlide({ points: nextPts });
+                              })
+                            }
+                            className="text-xs text-[#00d2ff] hover:underline"
+                          >
+                            Změnit ikonu ({pt.icon})
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={pt.title || ''}
+                          onChange={(e) => {
+                            const nextPts = [...activeSlide.points];
+                            nextPts[idx] = { ...nextPts[idx], title: e.target.value };
+                            updateActiveSlide({ points: nextPts });
+                          }}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-bold"
+                        />
+                        <textarea
+                          rows={2}
+                          value={pt.text || ''}
+                          onChange={(e) => {
+                            const nextPts = [...activeSlide.points];
+                            nextPts[idx] = { ...nextPts[idx], text: e.target.value };
+                            updateActiveSlide({ points: nextPts });
+                          }}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {activeSlide.type === 'big-stat' && (
+                  <div className="space-y-3 pt-2 border-t border-slate-800">
+                    <div>
+                      <label className="block text-xs font-bold text-[#00d2ff] mb-1">Obří číslo / údaj</label>
+                      <input
+                        type="text"
+                        value={activeSlide.stat || ''}
+                        onChange={(e) => updateActiveSlide({ stat: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-base font-extrabold text-[#00d2ff]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">Podtitul čísla</label>
+                      <input
+                        type="text"
+                        value={activeSlide.statLabel || ''}
+                        onChange={(e) => updateActiveSlide({ statLabel: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">Vysvětlující komentář</label>
+                      <textarea
+                        rows={3}
+                        value={activeSlide.description || ''}
+                        onChange={(e) => updateActiveSlide({ description: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {activeSlide.type === 'kahoot' && (
+                  <div className="space-y-3 pt-2 border-t border-slate-800">
+                    <div>
+                      <label className="block text-xs font-bold text-[#00d2ff] mb-1">Kontrolní otázka na slajdu</label>
+                      <textarea
+                        rows={2}
+                        value={activeSlide.question || ''}
+                        onChange={(e) => updateActiveSlide({ question: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div className="text-xs font-bold text-slate-400">Možnosti odpovědí (zaškrtněte správnou):</div>
+                    {(activeSlide.options || []).map((opt, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="correctOpt"
+                          checked={Number(activeSlide.correctIndex) === idx}
+                          onChange={() => updateActiveSlide({ correctIndex: idx })}
+                        />
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={(e) => {
+                            const nextOpts = [...activeSlide.options];
+                            nextOpts[idx] = e.target.value;
+                            updateActiveSlide({ options: nextOpts });
+                          }}
+                          className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </aside>
+            </div>
+          )}
+
+          {view === 'ai-generator' && (
+            <main className="max-w-5xl w-full mx-auto px-4 sm:px-8 py-8 flex-1 space-y-8">
+              <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
+                <div className="flex items-center gap-3 text-[#00d2ff] font-bold text-sm uppercase tracking-wider mb-2">
+                  <Sparkles size={18} />
+                  <span>Zjednodušení tvorby nových prezentací</span>
+                </div>
+                <h1 className="text-2xl sm:text-4xl font-extrabold text-white mb-3">
+                  AI Generátor se 100% jednotným designem a ikonami
+                </h1>
+                <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+                  Zkopírujte připravený prompt do ChatGPT, Claude nebo Gemini, vložte vygenerovaný kód sem a prezentace se okamžitě vytvoří ve vašem stylu!
+                </p>
+
+                <div className="mt-6 space-y-4">
+                  <label className="block text-sm font-bold text-white">
+                    1. Zadejte téma vaší příští hodiny (automaticky se vloží do promptu):
+                  </label>
+                  <input
+                    type="text"
+                    value={aiTopic}
+                    onChange={(e) => setAiTopic(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white font-semibold focus:outline-none focus:border-[#00d2ff]"
+                  />
+
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold uppercase text-[#00d2ff]">
+                        Připravený prompt pro AI (ChatGPT / Gemini / Claude):
+                      </span>
+                      <button
+                        onClick={() => {
+                          const promptText = `Jsi středoškolský učitel informatiky (ICT). Vytvoř kompletní výukovou prezentaci na téma "${aiTopic}" přesně v tomto JSON formátu. Používej chytlavá přirovnání z běžného života (ELI5 analogie) a vybírej ikony výhradně ze seznamu: Cpu, HardDrive, Monitor, Zap, Fan, Shield, Terminal, Layers, Box, Cloud, Wifi, Globe, Lock, Key, User, Users, Clock, Flame, Wrench, Sliders, Activity, Database, Disc, Compass, Sparkles, AlertTriangle, CheckCircle, Gamepad2, Smartphone, Server, Rocket, Car.
+
+Vrať POUZE čistý JSON objekt v této struktuře:
+{
+  "id": "deck-${Date.now()}",
+  "title": "${aiTopic}",
+  "subtitle": "Stručný podnadpis hodiny",
+  "category": "Sítě",
+  "badge": "ICT",
+  "icon": "Wifi",
+  "updatedAt": "2025-03-01",
+  "slides": [
+    { "id": "s1", "type": "title", "badge": "ICT", "icon": "Wifi", "title": "${aiTopic}", "subtitle": "Úvodní popis tématu" },
+    { "id": "s2", "type": "cards-3", "badge": "ZÁKLADNÍ PRINCIP", "title": "Hlavní myšlenka", "analogy": "Přirovnání: ...", "cards": [
+      { "icon": "Globe", "highlight": "Pojem 1", "title": "Nadpis 1", "text": "Vysvětlení..." },
+      { "icon": "Wifi", "highlight": "Pojem 2", "title": "Nadpis 2", "text": "Vysvětlení..." },
+      { "icon": "Shield", "highlight": "Pojem 3", "title": "Nadpis 3", "text": "Vysvětlení..." }
+    ]},
+    { "id": "s3", "type": "comparison", "badge": "POROVNÁNÍ", "title": "Varianta A vs. Varianta B", "analogy": "Rozdíl v praxi...", "left": { "icon": "Box", "title": "Varianta A", "subtitle": "Popis", "points": ["Bod 1", "Bod 2"] }, "right": { "icon": "Zap", "title": "Varianta B", "subtitle": "Popis", "points": ["Bod 1", "Bod 2"] } },
+    { "id": "s4", "type": "kahoot", "title": "KAHOOT!", "subtitle": "Čas na ověření znalostí", "question": "Kontrolní otázka?", "options": ["Správně", "Špatně 1", "Špatně 2", "Špatně 3"], "correctIndex": 0 }
+  ]
+}`;
+                          navigator.clipboard.writeText(promptText);
+                          showToast('Prompt byl zkopírován do schránky!');
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-[#00d2ff] text-slate-950 font-bold text-xs flex items-center gap-1.5"
+                      >
+                        <Copy size={14} />
+                        <span>Zkopírovat prompt pro AI</span>
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400 font-mono leading-relaxed">
+                      Jsi středoškolský učitel informatiky (ICT). Vytvoř kompletní výukovou prezentaci na téma &quot;{aiTopic}&quot; s ELI5 přirovnáními a sjednocenými ikonami v JSON formátu...
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  <label className="block text-sm font-bold text-white">
+                    2. Vložte sem vygenerovaný JSON z AI a klikněte na Vytvořit prezentaci:
+                  </label>
+                  <textarea
+                    rows={7}
+                    value={jsonInput}
+                    onChange={(e) => setJsonInput(e.target.value)}
+                    placeholder='Sem vložte JSON objekt začínající { "id": ..., "title": ... }'
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs font-mono text-[#00d2ff] focus:outline-none focus:border-[#00d2ff]"
+                  />
+                  <button
+                    onClick={() => {
+                      try {
+                        const cleaned = jsonInput.replace(/```json/g, '').replace(/```/g, '').trim();
+                        const parsed = JSON.parse(cleaned);
+                        if (parsed.title && Array.isArray(parsed.slides)) {
+                          const newDeck = { ...parsed, id: 'deck-' + Date.now() };
+                          setPresentations((prev) => [newDeck, ...prev]);
+                          setActiveDeckId(newDeck.id);
+                          setCurrentSlideIndex(0);
+                          setJsonInput('');
+                          setView('editor');
+                          showToast('Nová prezentace byla vygenerována a otevřena v editoru!');
+                        } else {
+                          showToast('JSON neobsahuje pole "slides"');
+                        }
+                      } catch (e) {
+                        showToast('Neplatný JSON formát – zkontrolujte zkopírovaný text');
+                      }
+                    }}
+                    className="px-6 py-3 rounded-xl bg-[#00d2ff] hover:bg-[#38bdf8] text-slate-950 font-extrabold text-sm flex items-center gap-2 shadow-lg transition"
+                  >
+                    <Sparkles size={18} />
+                    <span>Vytvořit prezentaci ze vloženého JSONu</span>
+                  </button>
+                </div>
+              </div>
+            </main>
+          )}
+
+          {view === 'github-guide' && (
+            <main className="max-w-5xl w-full mx-auto px-4 sm:px-8 py-8 flex-1 space-y-8">
+              <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
+                <h2 className="text-2xl font-extrabold text-white mb-2 flex items-center gap-3">
+                  <Save size={24} className="text-[#00d2ff]" />
+                  <span>Zálohování a přenos prezentací</span>
+                </h2>
+                <p className="text-slate-300 text-sm sm:text-base mb-6">
+                  Všechny vaše úpravy se okamžitě ukládají do paměti prohlížeče (`localStorage`). Zde si můžete kdykoliv stáhnout kompletní záložní soubor `.json` nebo ho nahrát na školním počítači.
+                </p>
+
+                <div className="flex flex-wrap gap-4">
+                  <button
+                    onClick={exportAllData}
+                    className="px-5 py-3 rounded-xl bg-[#00d2ff] hover:bg-[#38bdf8] text-slate-950 font-extrabold text-sm flex items-center gap-2 shadow-lg transition"
+                  >
+                    <Download size={18} />
+                    <span>Stáhnout kompletní data (.json)</span>
+                  </button>
+
+                  <label className="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm flex items-center gap-2 border border-slate-700 cursor-pointer transition">
+                    <Upload size={18} className="text-[#00d2ff]" />
+                    <span>Nahrát data ze souboru (.json)</span>
+                    <input type="file" accept=".json" onChange={importAllData} className="hidden" />
+                  </label>
+
+                  <button
+                    onClick={resetToDefaults}
+                    className="px-5 py-3 rounded-xl bg-slate-900 hover:bg-rose-950/50 text-slate-400 hover:text-rose-300 font-semibold text-sm flex items-center gap-2 border border-slate-800 transition ml-auto"
+                  >
+                    <RefreshCw size={16} />
+                    <span>Obnovit výchozí 4 prezentace</span>
+                  </button>
+                </div>
+              </div>
+            </main>
+          )}
+        </div>
+      );
+    }
 
     const root = createRoot(document.getElementById('root'));
     root.render(<App />);
