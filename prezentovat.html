@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Výukové prezentace</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-color: #0b1120;
+      color: #f8fafc;
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* Export do PDF v přesném poměru 16:9 (1280x720 = 338.67mm x 190.5mm) */
+    @page {
+      size: 338.67mm 190.5mm;
+      margin: 0;
+    }
+
+    @media print {
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background-color: #0b1120 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .print-slide-page {
+        width: 338.67mm;
+        height: 190.5mm;
+        overflow: hidden;
+        page-break-after: always;
+        break-after: page;
+        position: relative;
+        background-color: #0b1120;
+      }
+
+      .print-slide-page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React 18 -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Firebase Compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+  <!-- PptxGenJS pro generování nativních PowerPoint (.pptx) prezentací v prohlížeči -->
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+
+  <!-- Existující sdílené moduly vašeho webu (bez editoru a bonusů) -->
+  <script src="./aplikace/firebase-config.js"></script>
+  <script src="./aplikace/firebase-service.js"></script>
+  <script src="./prezentace/obrazky.js"></script>
+  <script src="./prezentace/01-hardware-zaklady.js"></script>
+  <script src="./prezentace/02-operacni-systemy.js"></script>
+  <script src="./prezentace/03-parametry-hardwaru-1.js"></script>
+  <script src="./prezentace/04-parametry-hardwaru-2.js"></script>
+  <script src="./prezentace/materialy.js"></script>
+  <script src="./aplikace/ikony.js"></script>
+  <script src="./aplikace/slajdy.js"></script>
+
+  <!-- Oddělená aplikace čistě pro výběr, promítání a export (PDF + PPTX) -->
+  <script>
+    (function () {
+      const { useState, useEffect, useRef } = React;
+      const { createRoot } = ReactDOM;
+      const {
+        Cpu, Play, ChevronLeft, ChevronRight, Maximize2,
+        List, Pointer, X, Search, BookOpen, Cloud, Download, FileText
+      } = window.ICON_MAP;
+
+      // Pomocná funkce: převede SVG data URI na PNG base64, aby fungovalo ve všech verzích PowerPointu
+      function svgDataUrlToPng(svgUrl) {
+        return new Promise((resolve) => {
+          try {
+            const img = new Image();
+            img.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 1200;
+                canvas.height = 750;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                const ratio = Math.min(canvas.width / (img.width || 800), canvas.height / (img.height || 500));
+                const w = (img.width || 800) * ratio;
+                const h = (img.height || 500) * ratio;
+                ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+                resolve(canvas.toDataURL('image/png'));
+              } catch (e) {
+                resolve(null);
+              }
+            };
+            img.onerror = () => resolve(null);
+            img.src = svgUrl;
+          } catch (e) {
+            resolve(null);
+          }
+        });
+      }
+
+      // Generování plnohodnotné editovatelné prezentace PowerPoint (.pptx) v tmavém stylu 16:9
+      async function exportDeckToPptx(deck) {
+        if (!window.PptxGenJS) {
+          alert('Knihovna pro export PPTX se nepodařila načíst. Zkontrolujte připojení k internetu.');
+          return;
+        }
+
+        const pptx = new window.PptxGenJS();
+        pptx.layout = 'LAYOUT_WIDE'; // 13.333 × 7.5 palce (16:9)
+        pptx.title = deck.title || 'Prezentace';
+        pptx.subject = deck.subtitle || '';
+        pptx.author = 'ICT Výukový Portál';
+
+        const C = {
+          bg: '0B1120',
+          card: '0F172A',
+          cardAlt: '111C33',
+          border: '1E293B',
+          cyan: '00D2FF',
+          cyanDark: '0C2B3F',
+          white: 'FFFFFF',
+          text: 'E2E8F0',
+          muted: '94A3B8',
+          dim: '64748B'
+        };
+        const FONT = 'Calibri';
+
+        const addHeader = (pptSlide, badge, title) => {
+          if (badge) {
+            pptSlide.addText(String(badge).toUpperCase(), {
+              x: 0.65, y: 0.4, w: 12.0, h: 0.35,
+              fontFace: FONT, fontSize: 12, bold: true, color: C.cyan, charSpacing: 1.5
+            });
+          }
+          pptSlide.addText(String(title || '').replace(/\n/g, ' '), {
+            x: 0.65, y: 0.72, w: 12.0, h: 0.85,
+            fontFace: FONT, fontSize: 28, bold: true, color: C.white, valign: 'top'
+          });
+        };
+
+        const addFooter = (pptSlide, idx, total) => {
+          pptSlide.addText(`${idx + 1} / ${total}`, {
+            x: 11.8, y: 7.05, w: 1.0, h: 0.3,
+            fontFace: FONT, fontSize: 10, color: C.dim, align: 'right'
+          });
+        };
+
+        const slides = deck.slides || [];
+
+        for (let idx = 0; idx < slides.length; idx++) {
+          const s = slides[idx];
+          const pptSlide = pptx.addSlide();
+          pptSlide.background = { color: C.bg };
+
+          // 1. TITULNÍ SLAJD
+          if (s.type === 'title') {
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: 0.75, y: 1.55, w: 3.1, h: 0.45,
+              fill: { color: C.cyanDark }, line: { color: C.cyan, pt: 1 }, rectRadius: 0.22
+            });
+            pptSlide.addText(String(s.badge || 'ICT').toUpperCase(), {
+              x: 0.85, y: 1.58, w: 2.9, h: 0.4,
+              fontFace: FONT, fontSize: 12, bold: true, color: C.cyan, align: 'center', valign: 'middle'
+            });
+
+            pptSlide.addText(String(s.title || ''), {
+              x: 0.75, y: 2.25, w: 11.8, h: 2.0,
+              fontFace: FONT, fontSize: 42, bold: true, color: C.white, valign: 'top'
+            });
+
+            if (s.subtitle) {
+              pptSlide.addShape(pptx.ShapeType.rect, {
+                x: 0.75, y: 4.5, w: 0.08, h: 1.05,
+                fill: { color: C.cyan }, line: { color: C.cyan }
+              });
+              pptSlide.addText(String(s.subtitle), {
+                x: 1.02, y: 4.5, w: 10.8, h: 1.05,
+                fontFace: FONT, fontSize: 20, color: C.text, valign: 'middle'
+              });
+            }
+          }
+
+          // 2. SEKČNÍ PŘEDĚL
+          else if (s.type === 'section') {
+            pptSlide.addText(String(s.badge || 'SEKCE').toUpperCase(), {
+              x: 1.0, y: 2.05, w: 11.33, h: 0.45,
+              fontFace: FONT, fontSize: 14, bold: true, color: C.cyan, align: 'center', charSpacing: 2
+            });
+            pptSlide.addText(String(s.title || ''), {
+              x: 1.0, y: 2.6, w: 11.33, h: 1.3,
+              fontFace: FONT, fontSize: 44, bold: true, color: C.white, align: 'center', valign: 'middle'
+            });
+            if (s.subtitle) {
+              pptSlide.addText(String(s.subtitle), {
+                x: 1.8, y: 4.1, w: 9.73, h: 1.2,
+                fontFace: FONT, fontSize: 20, color: C.text, align: 'center', valign: 'top'
+              });
+            }
+          }
+
+          // 3. TŘI KARTY + ANALOGIE
+          else if (s.type === 'cards-3') {
+            addHeader(pptSlide, s.badge, s.title);
+
+            let cardsTop = 1.85;
+            let cardH = 4.95;
+
+            if (s.analogy) {
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: 0.65, y: 1.65, w: 12.03, h: 0.95,
+                fill: { color: C.card }, line: { color: C.cyan, pt: 1 }, rectRadius: 0.12
+              });
+              pptSlide.addText(String(s.analogy), {
+                x: 0.9, y: 1.72, w: 11.53, h: 0.82,
+                fontFace: FONT, fontSize: 15, color: C.text, valign: 'middle'
+              });
+              cardsTop = 2.85;
+              cardH = 3.95;
+            }
+
+            const cards = s.cards || [];
+            const count = Math.max(cards.length, 1);
+            const gap = 0.28;
+            const totalW = 12.03;
+            const cardW = (totalW - gap * (count - 1)) / count;
+
+            cards.forEach((card, i) => {
+              const cx = 0.65 + i * (cardW + gap);
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: cx, y: cardsTop, w: cardW, h: cardH,
+                fill: { color: C.card }, line: { color: C.border, pt: 1.2 }, rectRadius: 0.14
+              });
+
+              if (card.highlight) {
+                pptSlide.addShape(pptx.ShapeType.roundRect, {
+                  x: cx + 0.25, y: cardsTop + 0.25, w: cardW - 0.5, h: 0.42,
+                  fill: { color: C.cyanDark }, line: { color: C.cyan, pt: 0.75 }, rectRadius: 0.08
+                });
+                pptSlide.addText(String(card.highlight), {
+                  x: cx + 0.3, y: cardsTop + 0.27, w: cardW - 0.6, h: 0.38,
+                  fontFace: FONT, fontSize: 13, bold: true, color: C.cyan, align: 'center', valign: 'middle'
+                });
+              }
+
+              const titleY = card.highlight ? cardsTop + 0.85 : cardsTop + 0.35;
+              pptSlide.addText(String(card.title || ''), {
+                x: cx + 0.25, y: titleY, w: cardW - 0.5, h: 0.75,
+                fontFace: FONT, fontSize: 18, bold: true, color: C.white, valign: 'top'
+              });
+              pptSlide.addText(String(card.text || ''), {
+                x: cx + 0.25, y: titleY + 0.8, w: cardW - 0.5, h: cardH - (titleY - cardsTop) - 1.0,
+                fontFace: FONT, fontSize: 14, color: C.text, valign: 'top'
+              });
+            });
+          }
+
+          // 4. POROVNÁNÍ DVOU SLOUPCŮ
+          else if (s.type === 'comparison') {
+            addHeader(pptSlide, s.badge, s.title);
+
+            let topY = 1.8;
+            let colH = 5.0;
+            if (s.analogy) {
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: 0.65, y: 1.65, w: 12.03, h: 0.75,
+                fill: { color: C.card }, line: { color: C.border, pt: 1 }, rectRadius: 0.1
+              });
+              pptSlide.addText(String(s.analogy), {
+                x: 0.88, y: 1.7, w: 11.55, h: 0.65,
+                fontFace: FONT, fontSize: 14, color: C.text, valign: 'middle'
+              });
+              topY = 2.6;
+              colH = 4.25;
+            }
+
+            [s.left, s.right].forEach((col, i) => {
+              if (!col) return;
+              const cx = i === 0 ? 0.65 : 6.82;
+              const cw = 5.86;
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: cx, y: topY, w: cw, h: colH,
+                fill: { color: i === 0 ? C.card : C.cardAlt },
+                line: { color: i === 0 ? C.border : C.cyan, pt: 1.2 },
+                rectRadius: 0.14
+              });
+              pptSlide.addText(String(col.title || ''), {
+                x: cx + 0.3, y: topY + 0.25, w: cw - 0.6, h: 0.5,
+                fontFace: FONT, fontSize: 20, bold: true, color: C.white
+              });
+              if (col.subtitle) {
+                pptSlide.addText(String(col.subtitle), {
+                  x: cx + 0.3, y: topY + 0.72, w: cw - 0.6, h: 0.35,
+                  fontFace: FONT, fontSize: 13, bold: true, color: C.cyan
+                });
+              }
+              const bulletRuns = (col.points || []).map((pt) => ({
+                text: String(pt),
+                options: { bullet: { code: '2022', color: C.cyan }, breakLine: true, paraSpaceAfter: 8 }
+              }));
+              if (bulletRuns.length > 0) {
+                pptSlide.addText(bulletRuns, {
+                  x: cx + 0.3, y: topY + 1.2, w: cw - 0.6, h: colH - 1.45,
+                  fontFace: FONT, fontSize: 14, color: C.text, valign: 'top'
+                });
+              }
+            });
+          }
+
+          // 5. TEXT VLEVO + OBRÁZEK VPRAVO
+          else if (s.type === 'split-image') {
+            addHeader(pptSlide, s.badge, s.title);
+
+            const pts = s.points || [];
+            const boxH = Math.min(2.1, (4.85 - Math.max(0, pts.length - 1) * 0.2) / Math.max(pts.length, 1));
+            pts.forEach((pt, i) => {
+              const py = 1.85 + i * (boxH + 0.2);
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: 0.65, y: py, w: 5.8, h: boxH,
+                fill: { color: C.card }, line: { color: C.border, pt: 1 }, rectRadius: 0.12
+              });
+              pptSlide.addText(String(pt.title || ''), {
+                x: 0.9, y: py + 0.18, w: 5.3, h: 0.4,
+                fontFace: FONT, fontSize: 16, bold: true, color: C.white
+              });
+              pptSlide.addText(String(pt.text || ''), {
+                x: 0.9, y: py + 0.6, w: 5.3, h: boxH - 0.75,
+                fontFace: FONT, fontSize: 13, color: C.text, valign: 'top'
+              });
+            });
+
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: 6.75, y: 1.85, w: 5.93, h: 4.35,
+              fill: { color: '020617' }, line: { color: C.border, pt: 1.2 }, rectRadius: 0.14
+            });
+
+            if (s.imageUrl) {
+              let imgData = null;
+              if (s.imageUrl.startsWith('data:image/svg+xml')) {
+                imgData = await svgDataUrlToPng(s.imageUrl);
+              } else if (s.imageUrl.startsWith('data:image/')) {
+                imgData = s.imageUrl;
+              }
+              if (imgData) {
+                pptSlide.addImage({
+                  data: imgData,
+                  x: 6.9, y: 2.0, w: 5.63, h: 4.05,
+                  sizing: { type: 'contain', w: 5.63, h: 4.05 }
+                });
+              } else if (/^https?:\/\//i.test(s.imageUrl)) {
+                try {
+                  pptSlide.addImage({
+                    path: s.imageUrl,
+                    x: 6.9, y: 2.0, w: 5.63, h: 4.05,
+                    sizing: { type: 'contain', w: 5.63, h: 4.05 }
+                  });
+                } catch (e) {}
+              }
+            }
+
+            if (s.imageCaption) {
+              pptSlide.addText(String(s.imageCaption), {
+                x: 6.75, y: 6.3, w: 5.93, h: 0.4,
+                fontFace: FONT, fontSize: 12, italic: true, color: C.muted, align: 'center'
+              });
+            }
+          }
+
+          // 6. VELKÉ ČÍSLO / STATISTIKA
+          else if (s.type === 'big-stat') {
+            addHeader(pptSlide, s.badge, s.title);
+
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: 1.15, y: 1.95, w: 11.03, h: 4.7,
+              fill: { color: C.card }, line: { color: C.cyan, pt: 1.2 }, rectRadius: 0.2
+            });
+            pptSlide.addText(String(s.stat || ''), {
+              x: 1.4, y: 2.3, w: 10.53, h: 1.5,
+              fontFace: FONT, fontSize: 64, bold: true, color: C.cyan, align: 'center', valign: 'middle'
+            });
+            pptSlide.addText(String(s.statLabel || ''), {
+              x: 1.6, y: 3.9, w: 10.13, h: 0.7,
+              fontFace: FONT, fontSize: 24, bold: true, color: C.white, align: 'center', valign: 'middle'
+            });
+            if (s.description) {
+              pptSlide.addText(String(s.description), {
+                x: 1.8, y: 4.75, w: 9.73, h: 1.5,
+                fontFace: FONT, fontSize: 16, color: C.text, align: 'center', valign: 'top'
+              });
+            }
+          }
+
+          // 7. 4 KROKY PROCESU
+          else if (s.type === 'steps-4') {
+            addHeader(pptSlide, s.badge, s.title);
+
+            const steps = s.steps || [];
+            const count = Math.max(steps.length, 1);
+            const gap = 0.22;
+            const totalW = 12.03;
+            const stepW = (totalW - gap * (count - 1)) / count;
+
+            steps.forEach((st, i) => {
+              const sx = 0.65 + i * (stepW + gap);
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: sx, y: 2.0, w: stepW, h: 4.5,
+                fill: { color: C.card }, line: { color: C.border, pt: 1.2 }, rectRadius: 0.14
+              });
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: sx + 0.22, y: 2.25, w: 1.35, h: 0.38,
+                fill: { color: C.cyanDark }, line: { color: C.cyan, pt: 0.75 }, rectRadius: 0.08
+              });
+              pptSlide.addText(String(st.step || `KROK ${i + 1}`), {
+                x: sx + 0.22, y: 2.27, w: 1.35, h: 0.34,
+                fontFace: FONT, fontSize: 11, bold: true, color: C.cyan, align: 'center', valign: 'middle'
+              });
+              pptSlide.addText(String(st.title || ''), {
+                x: sx + 0.22, y: 2.85, w: stepW - 0.44, h: 0.7,
+                fontFace: FONT, fontSize: 17, bold: true, color: C.white, valign: 'top'
+              });
+              pptSlide.addText(String(st.text || ''), {
+                x: sx + 0.22, y: 3.6, w: stepW - 0.44, h: 2.55,
+                fontFace: FONT, fontSize: 13.5, color: C.text, valign: 'top'
+              });
+            });
+          }
+
+          // 8. ZÁVĚREČNÉ SHRNUTÍ (3 BOXY)
+          else if (s.type === 'summary') {
+            addHeader(pptSlide, s.badge, s.title);
+
+            const boxes = s.boxes || [];
+            const count = Math.max(boxes.length, 1);
+            const gap = 0.28;
+            const totalW = 12.03;
+            const boxW = (totalW - gap * (count - 1)) / count;
+
+            boxes.forEach((box, i) => {
+              const bx = 0.65 + i * (boxW + gap);
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: bx, y: 1.95, w: boxW, h: 4.75,
+                fill: { color: C.card }, line: { color: C.border, pt: 1.2 }, rectRadius: 0.14
+              });
+              pptSlide.addText(String(box.title || ''), {
+                x: bx + 0.25, y: 2.2, w: boxW - 0.5, h: 0.55,
+                fontFace: FONT, fontSize: 18, bold: true, color: C.cyan
+              });
+              pptSlide.addShape(pptx.ShapeType.line, {
+                x: bx + 0.25, y: 2.8, w: boxW - 0.5, h: 0,
+                line: { color: C.border, pt: 1 }
+              });
+              const itemRuns = (box.items || []).map((it) => ({
+                text: String(it),
+                options: { bullet: { code: '2713', color: C.cyan }, breakLine: true, paraSpaceAfter: 10 }
+              }));
+              if (itemRuns.length > 0) {
+                pptSlide.addText(itemRuns, {
+                  x: bx + 0.25, y: 3.0, w: boxW - 0.5, h: 3.45,
+                  fontFace: FONT, fontSize: 14, color: C.text, valign: 'top'
+                });
+              }
+            });
+          }
+
+          // 9. KAHOOT! SLAJD
+          else if (s.type === 'kahoot') {
+            const kUrl = s.kahootUrl || deck.kahootUrl || '';
+            pptSlide.addText('INTERAKTIVNÍ OVĚŘENÍ ZNALOSTÍ', {
+              x: 1.0, y: 1.6, w: 11.33, h: 0.4,
+              fontFace: FONT, fontSize: 13, bold: true, color: C.cyan, align: 'center', charSpacing: 1.5
+            });
+            pptSlide.addText(String(s.title || 'KAHOOT!'), {
+              x: 1.0, y: 2.15, w: 11.33, h: 1.1,
+              fontFace: FONT, fontSize: 48, bold: true, color: C.white, align: 'center'
+            });
+            pptSlide.addText(String(s.subtitle || 'Čas na ověření znalostí'), {
+              x: 1.8, y: 3.35, w: 9.73, h: 0.7,
+              fontFace: FONT, fontSize: 20, color: C.text, align: 'center'
+            });
+            if (kUrl) {
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: 4.4, y: 4.35, w: 4.53, h: 0.85,
+                fill: { color: C.cyan }, line: { color: C.cyan }, rectRadius: 0.16
+              });
+              pptSlide.addText('Spustit Kahoot!', {
+                x: 4.4, y: 4.38, w: 4.53, h: 0.8,
+                fontFace: FONT, fontSize: 20, bold: true, color: '020617',
+                align: 'center', valign: 'middle',
+                hyperlink: { url: kUrl }
+              });
+              pptSlide.addText(kUrl, {
+                x: 2.0, y: 5.35, w: 9.33, h: 0.4,
+                fontFace: FONT, fontSize: 12, color: C.muted, align: 'center',
+                hyperlink: { url: kUrl }
+              });
+            }
+          }
+
+          addFooter(pptSlide, idx, slides.length);
+        }
+
+        const safeFileName = (deck.title || 'prezentace')
+          .replace(/[\\/:*?"<>|]/g, '-')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        await pptx.writeFile({ fileName: `${safeFileName}.pptx` });
+      }
+
+      // Miniatura slajdu v poměru 16:9 (zmenšený živý náhled jako v PowerPointu)
+      function SlideThumbnail({ slide, deckKahootUrl }) {
+        const wrapperRef = useRef(null);
+        const [scale, setScale] = useState(0.22);
+
+        useEffect(() => {
+          const el = wrapperRef.current;
+          if (!el) return;
+          const updateScale = () => {
+            if (el.clientWidth > 0) {
+              setScale(el.clientWidth / 1280);
+            }
+          };
+          updateScale();
+          if (typeof ResizeObserver !== 'undefined') {
+            const observer = new ResizeObserver(updateScale);
+            observer.observe(el);
+            return () => observer.disconnect();
+          }
+          window.addEventListener('resize', updateScale);
+          return () => window.removeEventListener('resize', updateScale);
+        }, []);
+
+        return React.createElement(
+          'div',
+          {
+            ref: wrapperRef,
+            className: 'relative w-full aspect-video overflow-hidden bg-[#0b1120] pointer-events-none select-none'
+          },
+          React.createElement(
+            'div',
+            {
+              style: {
+                width: '1280px',
+                height: '720px',
+                transform: `scale(${scale})`,
+                transformOrigin: 'top left'
+              },
+              className: 'absolute top-0 left-0'
+            },
+            React.createElement(window.SlideRenderer, {
+              slide: slide,
+              isPreview: false,
+              deckKahootUrl: deckKahootUrl
+            })
+          )
+        );
+      }
+
+      function PresentationOnlyApp() {
+        const fb = window.FirebaseService;
+        const defaultPres = window.INITIAL_PRESENTATIONS || [];
+
+        const [presentations, setPresentations] = useState(defaultPres);
+        const [isLoading, setIsLoading] = useState(true);
+        const [view, setView] = useState('list'); // 'list' | 'present'
+        const [activeDeckId, setActiveDeckId] = useState(null);
+        const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+
+        const [searchQuery, setSearchQuery] = useState('');
+        const [selectedCategory, setSelectedCategory] = useState('Vše');
+
+        const [laserActive, setLaserActive] = useState(false);
+        const [laserPos, setLaserPos] = useState({ x: 0, y: 0 });
+        const [showSlideDrawer, setShowSlideDrawer] = useState(false);
+        const [printDeck, setPrintDeck] = useState(null);
+        const [exportingPptxId, setExportingPptxId] = useState(null);
+        const playerContainerRef = useRef(null);
+
+        // Načtení prezentací z Firebase (pouze čtení) + podpora parametru ?id=...
+        useEffect(() => {
+          async function loadDecks() {
+            let loadedDecks = defaultPres;
+            try {
+              if (fb && fb.isConfigured()) {
+                const data = await fb.loadPortalData();
+                if (Array.isArray(data.presentations) && data.presentations.length > 0) {
+                  loadedDecks = data.presentations;
+                }
+              }
+            } catch (err) {
+              console.warn('Načítám lokální zálohu prezentací:', err);
+            } finally {
+              setPresentations(loadedDecks);
+              const params = new URLSearchParams(window.location.search);
+              const requestedId = params.get('id');
+              if (requestedId) {
+                const match = loadedDecks.find((d) => d.id === requestedId);
+                if (match) {
+                  setActiveDeckId(match.id);
+                  setCurrentSlideIndex(0);
+                  setView('present');
+                }
+              }
+              setIsLoading(false);
+            }
+          }
+          loadDecks();
+        }, []);
+
+        // Spuštění tisku / uložení jako PDF jakmile se vykreslí všechny slajdy pro tisk
+        useEffect(() => {
+          if (!printDeck) return;
+          const originalTitle = document.title;
+          document.title = (printDeck.title || 'Prezentace').replace(/[\\/:*?"<>|]/g, '-');
+
+          const cleanup = () => {
+            document.title = originalTitle;
+            setPrintDeck(null);
+          };
+
+          window.addEventListener('afterprint', cleanup);
+          const timer = setTimeout(() => {
+            window.print();
+          }, 300);
+
+          return () => {
+            clearTimeout(timer);
+            window.removeEventListener('afterprint', cleanup);
+            document.title = originalTitle;
+          };
+        }, [printDeck]);
+
+        const handleExportPdf = (deck) => {
+          if (!deck) return;
+          if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+          }
+          setPrintDeck(deck);
+        };
+
+        const handleExportPptx = async (deck) => {
+          if (!deck || exportingPptxId) return;
+          setExportingPptxId(deck.id);
+          try {
+            await exportDeckToPptx(deck);
+          } catch (err) {
+            console.error('Chyba při generování PPTX:', err);
+            alert('Nepodařilo se vygenerovat PPTX: ' + (err.message || err));
+          } finally {
+            setExportingPptxId(null);
+          }
+        };
+
+        const activeDeck = presentations.find((p) => p.id === activeDeckId) || presentations[0];
+        const activeSlide = activeDeck?.slides?.[currentSlideIndex] || activeDeck?.slides?.[0];
+
+        const toggleFullscreen = () => {
+          if (!playerContainerRef.current) return;
+          if (!document.fullscreenElement) {
+            playerContainerRef.current.requestFullscreen().catch(() => {});
+          } else {
+            document.exitFullscreen().catch(() => {});
+          }
+        };
+
+        // Klávesové zkratky v režimu promítání
+        useEffect(() => {
+          if (view !== 'present') return;
+          const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+              if (showSlideDrawer) {
+                setShowSlideDrawer(false);
+              } else if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+              } else {
+                setView('list');
+                setLaserActive(false);
+              }
+              return;
+            }
+            if (showSlideDrawer) return;
+
+            if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+              e.preventDefault();
+              setCurrentSlideIndex((prev) => Math.min(prev + 1, (activeDeck?.slides?.length || 1) - 1));
+            } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+              e.preventDefault();
+              setCurrentSlideIndex((prev) => Math.max(prev - 1, 0));
+            } else if (e.key === 'f' || e.key === 'F') {
+              toggleFullscreen();
+            } else if (e.key === 'l' || e.key === 'L') {
+              setLaserActive((prev) => !prev);
+            }
+          };
+          window.addEventListener('keydown', handleKeyDown);
+          return () => window.removeEventListener('keydown', handleKeyDown);
+        }, [view, activeDeck, showSlideDrawer]);
+
+        const startPresentation = (deckId, slideIdx = 0) => {
+          setActiveDeckId(deckId);
+          setCurrentSlideIndex(slideIdx);
+          setLaserActive(false);
+          setShowSlideDrawer(false);
+          setView('present');
+        };
+
+        // Skrytá vrstva pro vektorový PDF export (viditelná jen při tisku / Uložit jako PDF)
+        const printLayer = printDeck
+          ? React.createElement(
+              'div',
+              { className: 'hidden print:block' },
+              (printDeck.slides || []).map((s, idx) =>
+                React.createElement(
+                  'div',
+                  { key: s.id || idx, className: 'print-slide-page' },
+                  React.createElement(window.SlideRenderer, {
+                    slide: s,
+                    isPreview: false,
+                    deckKahootUrl: printDeck.kahootUrl
+                  }),
+                  React.createElement(
+                    'div',
+                    {
+                      className:
+                        'absolute bottom-3 right-5 text-xs font-mono font-bold text-slate-500/80 pointer-events-none'
+                    },
+                    idx + 1,
+                    ' / ',
+                    printDeck.slides.length
+                  )
+                )
+              )
+            )
+          : null;
+
+        if (isLoading) {
+          return React.createElement(
+            'div',
+            { className: 'min-h-screen bg-[#0b1120] text-white flex flex-col items-center justify-center gap-4 p-6' },
+            React.createElement(
+              'div',
+              { className: 'w-14 h-14 rounded-2xl bg-[#00d2ff]/15 border border-[#00d2ff]/40 flex items-center justify-center text-[#00d2ff] animate-pulse' },
+              React.createElement(Cloud, { size: 30 })
+            ),
+            React.createElement('div', { className: 'text-lg font-bold' }, 'Načítám prezentace...')
+          );
+        }
+
+        // ====================================================================
+        // REŽIM PROMÍTÁNÍ (16:9 přehrávač s mřížkou náhledů + PDF & PPTX)
+        // ====================================================================
+        if (view === 'present' && activeDeck) {
+          const totalSlides = activeDeck.slides.length;
+          const progressPercent = ((currentSlideIndex + 1) / totalSlides) * 100;
+          const isExportingThisPptx = exportingPptxId === activeDeck.id;
+
+          return React.createElement(
+            React.Fragment,
+            null,
+            printLayer,
+            React.createElement(
+              'div',
+              {
+                ref: playerContainerRef,
+                onMouseMove: (e) => {
+                  if (laserActive && !showSlideDrawer) {
+                    setLaserPos({ x: e.clientX, y: e.clientY });
+                  }
+                },
+                className: `print:hidden fixed inset-0 bg-[#060a12] text-white flex flex-col justify-between z-50 select-none ${
+                  laserActive && !showSlideDrawer ? 'cursor-none' : ''
+                }`
+              },
+              laserActive && !showSlideDrawer &&
+                React.createElement('div', {
+                  style: { left: laserPos.x, top: laserPos.y },
+                  className:
+                    'pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-rose-500 shadow-[0_0_20px_8px_rgba(244,63,94,0.85)] border-2 border-white'
+                }),
+              // Horní lišta přehrávače
+              React.createElement(
+                'div',
+                { className: 'flex items-center justify-between px-6 py-3 bg-slate-950/90 border-b border-slate-800/80 backdrop-blur-md z-20' },
+                React.createElement(
+                  'div',
+                  { className: 'flex items-center gap-3 min-w-0' },
+                  React.createElement(
+                    'button',
+                    {
+                      onClick: () => {
+                        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+                        setLaserActive(false);
+                        setShowSlideDrawer(false);
+                        setView('list');
+                      },
+                      className:
+                        'flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium transition shrink-0'
+                    },
+                    React.createElement(ChevronLeft, { size: 18 }),
+                    React.createElement('span', null, 'Výběr prezentací')
+                  ),
+                  React.createElement('span', { className: 'text-slate-600' }, '|'),
+                  React.createElement(
+                    'span',
+                    { className: 'font-bold text-white text-sm sm:text-base truncate' },
+                    activeDeck.title
+                  )
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'flex items-center gap-2 shrink-0' },
+                  React.createElement(
+                    'button',
+                    {
+                      onClick: () => setLaserActive(!laserActive),
+                      title: 'Laserové ukazovátko (Klávesa L)',
+                      className: `flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border transition ${
+                        laserActive
+                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/50'
+                          : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700'
+                      }`
+                    },
+                    React.createElement(Pointer, { size: 16 }),
+                    React.createElement('span', { className: 'hidden sm:inline' }, 'Ukazovátko (L)')
+                  ),
+                  React.createElement(
+                    'button',
+                    {
+                      onClick: () => setShowSlideDrawer(!showSlideDrawer),
+                      className: `flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border transition ${
+                        showSlideDrawer
+                          ? 'bg-[#00d2ff]/20 text-[#00d2ff] border-[#00d2ff]/50'
+                          : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800'
+                      }`
+                    },
+                    React.createElement(List, { size: 16 }),
+                    React.createElement('span', { className: 'hidden sm:inline' }, 'Osnova (', currentSlideIndex + 1, '/', totalSlides, ')')
+                  ),
+                  React.createElement(
+                    'button',
+                    {
+                      onClick: () => handleExportPdf(activeDeck),
+                      title: 'Stáhnout celou prezentaci jako PDF',
+                      className:
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-[#00d2ff] border border-[#00d2ff]/35 text-xs sm:text-sm font-semibold transition'
+                    },
+                    React.createElement(Download, { size: 15 }),
+                    React.createElement('span', { className: 'hidden sm:inline' }, 'PDF')
+                  ),
+                  React.createElement(
+                    'button',
+                    {
+                      disabled: Boolean(exportingPptxId),
+                      onClick: () => handleExportPptx(activeDeck),
+                      title: 'Stáhnout celou prezentaci pro PowerPoint (.pptx)',
+                      className:
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-amber-300 border border-amber-400/35 text-xs sm:text-sm font-semibold transition'
+                    },
+                    React.createElement(FileText, { size: 15 }),
+                    React.createElement('span', { className: 'hidden sm:inline' }, isExportingThisPptx ? 'Generuji...' : 'PPTX')
+                  ),
+                  React.createElement(
+                    'button',
+                    {
+                      onClick: toggleFullscreen,
+                      title: 'Celá obrazovka (Klávesa F)',
+                      className:
+                        'p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition'
+                    },
+                    React.createElement(Maximize2, { size: 16 })
+                  )
+                )
+              ),
+              // Plocha slajdu + přehled všech náhledů (PowerPoint styl)
+              React.createElement(
+                'div',
+                {
+                  onClick: () => {
+                    if (!showSlideDrawer && currentSlideIndex < totalSlides - 1) {
+                      setCurrentSlideIndex(currentSlideIndex + 1);
+                    }
+                  },
+                  className: 'relative flex-1 flex items-center justify-center p-2 sm:p-6 overflow-hidden'
+                },
+                React.createElement(
+                  'div',
+                  { className: 'w-full h-full max-w-[1600px] max-h-[900px] rounded-2xl overflow-hidden shadow-[0_0_70px_rgba(0,0,0,0.8)] border border-slate-800/80' },
+                  React.createElement(window.SlideRenderer, {
+                    slide: activeSlide,
+                    deckKahootUrl: activeDeck.kahootUrl
+                  })
+                ),
+                showSlideDrawer &&
+                  React.createElement(
+                    'div',
+                    {
+                      onClick: (e) => e.stopPropagation(),
+                      className:
+                        'absolute inset-0 bg-[#060a12]/95 backdrop-blur-xl z-30 flex flex-col overflow-hidden'
+                    },
+                    React.createElement(
+                      'div',
+                      { className: 'flex items-center justify-between px-6 sm:px-8 py-4 border-b border-slate-800 bg-slate-950/90 shrink-0' },
+                      React.createElement(
+                        'div',
+                        null,
+                        React.createElement(
+                          'h4',
+                          { className: 'font-extrabold text-white text-base sm:text-lg' },
+                          'Přehled všech snímků (', totalSlides, ')'
+                        ),
+                        React.createElement(
+                          'p',
+                          { className: 'text-xs text-slate-400' },
+                          'Kliknutím na náhled přejdete přímo na vybraný snímek • Esc pro zavření'
+                        )
+                      ),
+                      React.createElement(
+                        'button',
+                        {
+                          onClick: () => setShowSlideDrawer(false),
+                          className: 'flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-bold transition'
+                        },
+                        React.createElement(X, { size: 16 }),
+                        React.createElement('span', null, 'Zavřít')
+                      )
+                    ),
+                    React.createElement(
+                      'div',
+                      { className: 'flex-1 overflow-y-auto p-5 sm:p-8' },
+                      React.createElement(
+                        'div',
+                        { className: 'max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5' },
+                        activeDeck.slides.map((s, idx) => {
+                          const isCurrent = idx === currentSlideIndex;
+                          return React.createElement(
+                            'button',
+                            {
+                              key: s.id || idx,
+                              onClick: () => {
+                                setCurrentSlideIndex(idx);
+                                setShowSlideDrawer(false);
+                              },
+                              className: `group text-left rounded-2xl overflow-hidden border-2 transition-all flex flex-col bg-slate-900/90 ${
+                                isCurrent
+                                  ? 'border-[#00d2ff] shadow-[0_0_25px_rgba(0,210,255,0.3)] scale-[1.01]'
+                                  : 'border-slate-800 hover:border-[#00d2ff]/60 hover:-translate-y-0.5'
+                              }`
+                            },
+                            React.createElement(
+                              'div',
+                              { className: 'relative w-full border-b border-slate-800/80' },
+                              React.createElement(SlideThumbnail, {
+                                slide: s,
+                                deckKahootUrl: activeDeck.kahootUrl
+                              }),
+                              React.createElement(
+                                'span',
+                                {
+                                  className: `absolute top-2 left-2 px-2 py-0.5 rounded-md text-[11px] font-mono font-extrabold shadow ${
+                                    isCurrent
+                                      ? 'bg-[#00d2ff] text-slate-950'
+                                      : 'bg-slate-950/85 text-slate-200 border border-slate-700'
+                                  }`
+                                },
+                                String(idx + 1).padStart(2, '0')
+                              )
+                            ),
+                            React.createElement(
+                              'div',
+                              { className: 'px-3 py-2.5 flex items-center justify-between gap-2' },
+                              React.createElement(
+                                'span',
+                                { className: 'text-xs font-bold text-slate-200 group-hover:text-white truncate' },
+                                (s.title || '').replace(/\n/g, ' ')
+                              ),
+                              isCurrent &&
+                                React.createElement(
+                                  'span',
+                                  { className: 'text-[10px] font-extrabold uppercase text-[#00d2ff] shrink-0' },
+                                  'Aktuální'
+                                )
+                            )
+                          );
+                        })
+                      )
+                    )
+                  )
+              ),
+              // Spodní ovládání
+              React.createElement(
+                'div',
+                { className: 'bg-slate-950/90 border-t border-slate-800/80 px-6 py-3 flex items-center justify-between z-20' },
+                React.createElement(
+                  'div',
+                  { className: 'text-xs sm:text-sm text-slate-400 font-medium' },
+                  'Slajd ',
+                  React.createElement('strong', { className: 'text-white' }, currentSlideIndex + 1),
+                  ' z ',
+                  React.createElement('strong', { className: 'text-white' }, totalSlides)
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'flex items-center gap-3' },
+                  React.createElement(
+                    'button',
+                    {
+                      disabled: currentSlideIndex === 0,
+                      onClick: () => setCurrentSlideIndex((prev) => Math.max(0, prev - 1)),
+                      className:
+                        'px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white font-semibold text-sm flex items-center gap-2 border border-slate-800 transition'
+                    },
+                    React.createElement(ChevronLeft, { size: 18 }),
+                    React.createElement('span', null, 'Předchozí')
+                  ),
+                  React.createElement(
+                    'button',
+                    {
+                      disabled: currentSlideIndex === totalSlides - 1,
+                      onClick: () => setCurrentSlideIndex((prev) => Math.min(totalSlides - 1, prev + 1)),
+                      className:
+                        'px-5 py-2 rounded-xl bg-[#00d2ff] hover:bg-[#38bdf8] disabled:opacity-40 text-slate-950 font-bold text-sm flex items-center gap-2 transition shadow-[0_0_20px_rgba(0,210,255,0.3)]'
+                    },
+                    React.createElement('span', null, 'Další slajd'),
+                    React.createElement(ChevronRight, { size: 18 })
+                  )
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'hidden md:flex items-center gap-2 text-xs text-slate-500' },
+                  React.createElement('span', null, 'Šipky ← →'),
+                  React.createElement('span', null, '•'),
+                  React.createElement('span', null, 'F = Fullscreen'),
+                  React.createElement('span', null, '•'),
+                  React.createElement('span', null, 'Esc = Zpět')
+                )
+              ),
+              React.createElement(
+                'div',
+                { className: 'h-1.5 w-full bg-slate-900' },
+                React.createElement('div', {
+                  className: 'h-full bg-[#00d2ff] transition-all duration-300 shadow-[0_0_12px_#00d2ff]',
+                  style: { width: `${progressPercent}%` }
+                })
+              )
+            )
+          );
+        }
+
+        // ====================================================================
+        // ČISTÝ VÝBĚR PREZENTACÍ
+        // ====================================================================
+        const dynamicCategories = Array.from(new Set(presentations.map((p) => p.category).filter(Boolean)));
+        const categories = ['Vše', ...dynamicCategories];
+
+        const filteredPresentations = presentations.filter((p) => {
+          const matchesCategory = selectedCategory === 'Vše' || p.category === selectedCategory;
+          const q = searchQuery.toLowerCase();
+          const matchesSearch =
+            (p.title || '').toLowerCase().includes(q) ||
+            (p.subtitle || '').toLowerCase().includes(q);
+          return matchesCategory && matchesSearch;
+        });
+
+        return React.createElement(
+          React.Fragment,
+          null,
+          printLayer,
+          React.createElement(
+            'div',
+            { className: 'print:hidden min-h-screen bg-[#0b1120] text-slate-100 flex flex-col' },
+            React.createElement(
+              'header',
+              { className: 'sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-8 py-4' },
+              React.createElement(
+                'div',
+                { className: 'max-w-7xl mx-auto flex items-center justify-between gap-4' },
+                React.createElement(
+                  'div',
+                  { className: 'flex items-center gap-3.5' },
+                  React.createElement(
+                    'div',
+                    { className: 'w-11 h-11 rounded-xl bg-[#00d2ff]/15 border border-[#00d2ff]/40 flex items-center justify-center text-[#00d2ff]' },
+                    React.createElement(BookOpen, { size: 22 })
+                  ),
+                  React.createElement(
+                    'div',
+                    null,
+                    React.createElement('h1', { className: 'font-extrabold text-lg sm:text-xl tracking-tight text-white' }, 'Výukové prezentace ICT'),
+                    React.createElement('p', { className: 'text-xs text-slate-400' }, 'Vyberte téma pro spuštění nebo stažení prezentace (PDF / PPTX)')
+                  )
+                )
+              )
+            ),
+            React.createElement(
+              'main',
+              { className: 'max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 flex-1 space-y-8' },
+              // Filtry a vyhledávání
+              React.createElement(
+                'div',
+                { className: 'flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4' },
+                React.createElement(
+                  'div',
+                  { className: 'flex items-center gap-2 overflow-x-auto pb-1' },
+                  categories.map((cat) =>
+                    React.createElement(
+                      'button',
+                      {
+                        key: cat,
+                        onClick: () => setSelectedCategory(cat),
+                        className: `px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition ${
+                          selectedCategory === cat
+                            ? 'bg-[#00d2ff]/20 text-[#00d2ff] border border-[#00d2ff]/50'
+                            : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                        }`
+                      },
+                      cat
+                    )
+                  )
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'relative w-full sm:w-72' },
+                  React.createElement(Search, { size: 18, className: 'absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500' }),
+                  React.createElement('input', {
+                    type: 'text',
+                    value: searchQuery,
+                    onChange: (e) => setSearchQuery(e.target.value),
+                    placeholder: 'Hledat téma...',
+                    className:
+                      'w-full pl-10 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#00d2ff]'
+                  })
+                )
+              ),
+              // Karty prezentací
+              React.createElement(
+                'div',
+                { className: 'grid grid-cols-1 md:grid-cols-2 gap-6' },
+                filteredPresentations.map((deck) => {
+                  const isExportingThis = exportingPptxId === deck.id;
+                  return React.createElement(
+                    'div',
+                    {
+                      key: deck.id,
+                      className:
+                        'group bg-slate-900/75 hover:bg-slate-900 border border-slate-800 hover:border-[#00d2ff]/50 rounded-2xl p-6 flex flex-col justify-between transition-all shadow-xl'
+                    },
+                    React.createElement(
+                      'div',
+                      null,
+                      React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-3 mb-4' },
+                        React.createElement(window.UnifiedIcon, { name: deck.icon || 'Cpu', size: 28 }),
+                        React.createElement(
+                          'div',
+                          null,
+                          React.createElement(
+                            'span',
+                            { className: 'text-xs font-bold uppercase tracking-wider text-[#00d2ff]' },
+                            deck.category,
+                            ' • ',
+                            deck.slides.length,
+                            ' slajdů'
+                          ),
+                          React.createElement(
+                            'h2',
+                            { className: 'text-xl font-extrabold text-white group-hover:text-[#00d2ff] transition' },
+                            deck.title
+                          )
+                        )
+                      ),
+                      React.createElement('p', { className: 'text-slate-300 text-sm leading-relaxed mb-5' }, deck.subtitle),
+                      React.createElement(
+                        'div',
+                        { className: 'flex flex-wrap gap-1.5 mb-6' },
+                        deck.slides.slice(1, 6).map((s, idx) =>
+                          React.createElement(
+                            'span',
+                            {
+                              key: idx,
+                              onClick: () => startPresentation(deck.id, idx + 1),
+                              className:
+                                'text-xs px-2.5 py-1 rounded-md bg-slate-950/90 text-slate-300 border border-slate-800 hover:border-[#00d2ff]/40 cursor-pointer transition truncate max-w-[200px]'
+                            },
+                            idx + 2,
+                            '. ',
+                            s.title
+                          )
+                        ),
+                        deck.slides.length > 6 &&
+                          React.createElement(
+                            'span',
+                            { className: 'text-xs px-2.5 py-1 rounded-md bg-slate-950/50 text-slate-500' },
+                            '+',
+                            deck.slides.length - 6,
+                            ' dalších'
+                          )
+                      )
+                    ),
+                    React.createElement(
+                      'div',
+                      { className: 'pt-4 border-t border-slate-800/80 flex items-center gap-2.5' },
+                      React.createElement(
+                        'button',
+                        {
+                          onClick: () => startPresentation(deck.id, 0),
+                          className:
+                            'flex-1 py-2.5 px-4 rounded-xl bg-[#00d2ff] hover:bg-[#38bdf8] text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 transition shadow-[0_0_20px_rgba(0,210,255,0.2)]'
+                        },
+                        React.createElement(Play, { size: 16, fill: 'currentColor' }),
+                        React.createElement('span', null, 'Spustit')
+                      ),
+                      React.createElement(
+                        'button',
+                        {
+                          onClick: () => handleExportPdf(deck),
+                          title: 'Stáhnout prezentaci jako PDF',
+                          className:
+                            'py-2.5 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-[#00d2ff] font-semibold text-sm flex items-center gap-1.5 border border-slate-700 transition shrink-0'
+                        },
+                        React.createElement(Download, { size: 15 }),
+                        React.createElement('span', null, 'PDF')
+                      ),
+                      React.createElement(
+                        'button',
+                        {
+                          disabled: Boolean(exportingPptxId),
+                          onClick: () => handleExportPptx(deck),
+                          title: 'Stáhnout prezentaci pro PowerPoint (.pptx)',
+                          className:
+                            'py-2.5 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-amber-300 hover:text-amber-200 font-semibold text-sm flex items-center gap-1.5 border border-amber-400/30 transition shrink-0'
+                        },
+                        React.createElement(FileText, { size: 15 }),
+                        React.createElement('span', null, isExportingThis ? 'Generuji...' : 'PPTX')
+                      )
+                    )
+                  );
+                })
+              )
+            )
+          )
+        );
+      }
+
+      const root = createRoot(document.getElementById('root'));
+      root.render(React.createElement(PresentationOnlyApp, null));
+    })();
+  </script>
+</body>
+</html>
